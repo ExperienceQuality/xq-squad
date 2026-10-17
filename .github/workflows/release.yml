@@ -1,0 +1,97 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g. v1.0.0). Defaults to release_tag in distribution/.squad/squad.json."
+        required: false
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Resolve version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "$INPUT_VERSION" ]]; then
+            VERSION="$INPUT_VERSION"
+          else
+            VERSION="$(node -e "console.log(JSON.parse(require('fs').readFileSync('distribution/.squad/squad.json','utf8')).release_tag)")"
+          fi
+          if [[ ! "$VERSION" =~ ^v ]]; then
+            echo "Error: version must start with 'v', got '$VERSION'" >&2
+            exit 1
+          fi
+          echo "Resolved version: $VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Check if release already exists
+        id: guard
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if git rev-parse "refs/tags/${VERSION}" >/dev/null 2>&1 || gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "release already exists"
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skipped=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate distribution
+        if: steps.guard.outputs.skipped != 'true'
+        run: bash scripts/validate.sh
+
+      - name: Run Node tests
+        if: steps.guard.outputs.skipped != 'true'
+        run: node --test tests/*.test.mjs
+
+      - name: Run shell tests
+        if: steps.guard.outputs.skipped != 'true'
+        run: |
+          bash tests/install.test.sh
+          bash tests/install-pipe.test.sh
+          bash tests/upgrade.test.sh
+          bash tests/e2e.test.sh
+
+      - name: Package release
+        if: steps.guard.outputs.skipped != 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: bash scripts/package-release.sh --version "$VERSION" --output .releases
+
+      - name: Create tag
+        if: steps.guard.outputs.skipped != 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git tag -a -m "Release $VERSION" "$VERSION"
+          git push origin "$VERSION"
+
+      - name: Create GitHub release
+        if: steps.guard.outputs.skipped != 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create "$VERSION" --title "XQ Squad $VERSION" --generate-notes
+          gh release upload "$VERSION" install.sh ".releases/squad-${VERSION}.tar.gz" ".releases/squad-${VERSION}.tar.gz.sha256" --clobber
