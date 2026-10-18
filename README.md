@@ -33,7 +33,7 @@ xq-squad/
 Pipe the installer straight into `sh` (POSIX-compatible, no download needed):
 
 ```bash
-curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v1.0.0/install.sh | sh -s -- --target . --version v1.0.0
+curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v1.0.3/install.sh | sh -s -- --target . --version v1.0.3
 ```
 
 The installer is self-contained: helper scripts ship inside the release archive.
@@ -41,21 +41,89 @@ If the target repo has uncommitted changes and stdin is not a TTY (e.g. piped or
 CI), the installer refuses to continue — pass `--yes` to proceed non-interactively:
 
 ```bash
-curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v1.0.0/install.sh | sh -s -- --target . --version v1.0.0 --yes
+curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v1.0.3/install.sh | sh -s -- --target . --version v1.0.3 --yes
 ```
 
 Or download and run it yourself:
 
 ```bash
-curl -fL https://github.com/ExperienceQuality/xq-squad/releases/download/v1.0.0/install.sh -o /tmp/squad-install.sh
-sh /tmp/squad-install.sh --target . --version v1.0.0
+curl -fL https://github.com/ExperienceQuality/xq-squad/releases/download/v1.0.3/install.sh -o /tmp/squad-install.sh
+sh /tmp/squad-install.sh --target . --version v1.0.3
 ```
 
 Or use a local archive:
 
 ```bash
-bash install.sh --target . --version v1.0.0 --archive squad-v1.0.0.tar.gz --checksum squad-v1.0.0.tar.gz.sha256
+bash install.sh --target . --version v1.0.3 --archive squad-v1.0.3.tar.gz --checksum squad-v1.0.3.tar.gz.sha256
 ```
+
+## Using the squad
+
+After installing, there is nothing to configure — open a Devin session on the
+consumer repository and describe your task in chat. The installed `AGENTS.md`
+makes Devin the **Agent Lead** automatically; no slash commands or special
+syntax are needed.
+
+Example prompts:
+
+```text
+Add pagination to the /orders endpoint, page size 50.
+Fix the flaky checkout test and tell me what was wrong.
+Refactor the auth middleware to use the new token service.
+```
+
+What happens on each request:
+
+1. **Intake & discovery** — the Lead establishes acceptance criteria, reads
+   `.squad/README.md` and relevant memory, and maps affected files
+   (delegating to the `analyst` profile when subagents are available).
+2. **Planning & execution** — tasks are planned and delegated to specialist
+   profiles (`implementer`, `tester`) or performed directly by the Lead.
+3. **Verification** — the relevant build/test/lint checks run; only observed
+   results are reported.
+4. **Memory update** — durable findings are written to `.squad/MEMORY.md` and
+   `.squad/memory/` by the `memory-maintainer` profile (reports `UPDATED`,
+   `UNCHANGED`, or `BLOCKED`).
+5. **Delivery** — you get a report of what changed, which checks ran, review
+   findings, and memory status.
+
+**Delegation fallback:** if Devin custom subagents are enabled, specialists
+run as delegated subagents using the `.devin/agents/` profiles. If they are
+unavailable, the Lead performs each role sequentially — same workflow, same
+delivery contract, just slower.
+
+**Memory:** the squad keeps durable knowledge in `.squad/MEMORY.md` plus
+NDJSON records under `.squad/memory/`. Only relevant records are loaded per
+task (see `.squad/scripts/memory-search.mjs`). You can seed repository
+knowledge in `.squad/knowledge/` — it is consumer-owned and never overwritten
+by upgrades.
+
+**Authority:** the Lead never commits, pushes, or opens a PR unless you
+explicitly ask it to in the session.
+
+## Updating
+
+Pull a newer release into a consumer repo (`install.sh` refuses to run over an
+existing installation — always use `update.sh` for upgrades):
+
+```bash
+curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v1.0.3/update.sh | sh -s -- --target . --version v1.0.3
+```
+
+Or, from a clone of this repo:
+
+```bash
+bash update.sh --target /path/to/consumer-repo --version v1.0.3
+```
+
+`update.sh` requires Node.js ≥ 20 (it runs the three-way merge helper shipped
+inside the release archive).
+
+Upgrades only touch squad-managed files (see the `ownership` section of
+`.squad/squad.json`). Consumer edits to managed files are detected and
+preserved; consumer-owned paths (`.squad/MEMORY.md`, `.squad/knowledge/`,
+`.squad/memory/`, `.devin/rules/local-*`, `.devin/agents/local-*`) are never
+touched.
 
 ## Development
 
@@ -68,7 +136,7 @@ bash scripts/validate.sh
 Package a release:
 
 ```bash
-bash scripts/package-release.sh --version v1.0.0
+bash scripts/package-release.sh --version v1.0.3
 ```
 
 Run tests:
