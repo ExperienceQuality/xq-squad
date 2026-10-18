@@ -33,6 +33,46 @@ AGENTS.md                          # Always-on Lead instructions, managed sectio
 6. The Lead never commits, pushes, or opens a PR unless explicitly asked in the session.
 7. Upgrade with `update.sh --target . --version vX.Y.Z`. Managed files update safely; `.squad/MEMORY.md`, `.squad/knowledge/`, `.squad/memory/`, and `.devin/*/local-*` are never touched.
 
+## How it works
+
+Squad components inside the consumer repository:
+
+```mermaid
+flowchart TD
+    U[User prompt in Devin chat] --> L[Agent Lead<br/>main session]
+    A[AGENTS.md<br/>always-on contract] --> L
+    L --> SK[squad-delivery skill]
+    SK --> WF[delivery workflow<br/>8 stages]
+    L -->|delegate| AN[analyst]
+    L -->|delegate| IM[implementer]
+    L -->|delegate| TE[tester]
+    L -->|delegate| RE[reviewer]
+    L -->|delegate| MM[memory-maintainer]
+    AN & IM & TE & RE & MM -.->|fallback: Lead embodies role| L
+    L <--> MEM[(.squad/MEMORY.md<br/>memory/*.ndjson)]
+```
+
+Delivery lifecycle. Any stage may end the run with `FAILED`, `CANCELLED`,
+or `BLOCKED`:
+
+```mermaid
+stateDiagram-v2
+    [*] --> INTAKE
+    INTAKE --> DISCOVERY
+    DISCOVERY --> PLANNING
+    PLANNING --> EXECUTION
+    EXECUTION --> INTEGRATION
+    INTEGRATION --> VERIFICATION
+    VERIFICATION --> MEMORY_UPDATE
+    MEMORY_UPDATE --> DELIVERY
+    DELIVERY --> [*]
+    INTAKE --> BLOCKED
+    EXECUTION --> FAILED
+    INTEGRATION --> FAILED
+    VERIFICATION --> FAILED
+    EXECUTION --> CANCELLED
+```
+
 ## Customization
 
 - Add consumer-owned knowledge under `.squad/knowledge/`.

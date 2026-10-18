@@ -11,6 +11,43 @@ Repository-native Devin subagent squad. Install into any GitHub repository and o
 - Versioned GitHub Releases with installer, archive, and checksum.
 - No hosted service, database, GitHub App, or custom runtime.
 
+## How it works
+
+```mermaid
+flowchart TD
+    U[User prompt in Devin chat] --> L[Agent Lead<br/>main session]
+    A[AGENTS.md<br/>always-on contract] --> L
+    L --> SK[squad-delivery skill]
+    SK --> WF[delivery workflow<br/>8 stages]
+    L -->|delegate| AN[analyst]
+    L -->|delegate| IM[implementer]
+    L -->|delegate| TE[tester]
+    L -->|delegate| RE[reviewer]
+    L -->|delegate| MM[memory-maintainer]
+    AN & IM & TE & RE & MM -.->|fallback: Lead embodies role| L
+    L <--> MEM[(.squad/MEMORY.md<br/>memory/*.ndjson)]
+```
+
+Delivery lifecycle:
+
+```mermaid
+stateDiagram-v2
+    [*] --> INTAKE
+    INTAKE --> DISCOVERY
+    DISCOVERY --> PLANNING
+    PLANNING --> EXECUTION
+    EXECUTION --> INTEGRATION
+    INTEGRATION --> VERIFICATION
+    VERIFICATION --> MEMORY_UPDATE
+    MEMORY_UPDATE --> DELIVERY
+    DELIVERY --> [*]
+    INTAKE --> BLOCKED
+    EXECUTION --> FAILED
+    INTEGRATION --> FAILED
+    VERIFICATION --> FAILED
+    EXECUTION --> CANCELLED
+```
+
 ## Repository layout
 
 ```text
