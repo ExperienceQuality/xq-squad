@@ -83,4 +83,25 @@ if [[ ! -f "$CONSUMER2/.squad/install-state.json" ]]; then
   exit 1
 fi
 
+# --- Scenario 4: dirty tree outside squad-managed paths proceeds -----------
+CONSUMER3="$TMP_BASE/consumer3"
+mkdir -p "$CONSUMER3"
+git -C "$CONSUMER3" init -q
+echo "console.log('x')" > "$CONSUMER3/app.js"
+git -C "$CONSUMER3" add app.js
+git -C "$CONSUMER3" -c user.email=test@example.com -c user.name=Test commit -qm init
+echo "// uncommitted" >> "$CONSUMER3/app.js"
+
+# No --yes: must still succeed since app.js does not overlap squad paths.
+cat "$REPO_ROOT/install.sh" | sh -s -- \
+  --target "$CONSUMER3" \
+  --version v1.0.0 \
+  --archive "$ARCH" \
+  --checksum "$SUM"
+
+if [[ ! -f "$CONSUMER3/.squad/install-state.json" ]]; then
+  echo "install-state.json missing; non-overlapping dirty file blocked install" >&2
+  exit 1
+fi
+
 echo "install-pipe tests passed"

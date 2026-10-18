@@ -67,22 +67,30 @@ sha256_file() {
 [ -d "$TARGET" ] || error "target directory does not exist: $TARGET"
 [ -d "$TARGET/.git" ] || error "target is not a git repository: $TARGET"
 
-# Preflight: git state. Only tracked modifications count as dirty; untracked
-# files are the consumer's own and are never touched by the installer.
-if [ -n "$(git -C "$TARGET" status --porcelain --untracked-files=no 2>/dev/null)" ]; then
-  echo "Warning: target repository has uncommitted changes." >&2
-  echo "Run from a clean working tree, or confirm no overlapping files before proceeding." >&2
-  if [ "$ASSUME_YES" = true ]; then
-    :
-  elif [ -t 0 ]; then
-    printf '%s' "Continue? [y/N] "
-    read -r confirm || true
-    case "$confirm" in
-      y|Y) ;;
-      *) error "installation cancelled by user" ;;
-    esac
+# Preflight: git state. Untracked files and uncommitted changes outside the
+# squad-managed paths (AGENTS.md, .devin/, .squad/) are the consumer's own —
+# they trigger a note only. Dirty paths that overlap squad files require
+# confirmation (or --yes non-interactively).
+DIRTY_PATHS="$(git -C "$TARGET" status --porcelain --untracked-files=no 2>/dev/null | sed -e 's/^...//' -e 's/.* -> //' -e 's/^"//' -e 's/"$//' || true)"
+if [ -n "$DIRTY_PATHS" ]; then
+  OVERLAP="$(printf '%s\n' "$DIRTY_PATHS" | grep -E '^(AGENTS\.md|\.devin/|\.squad/)' || true)"
+  if [ -z "$OVERLAP" ]; then
+    echo "Note: uncommitted changes exist outside squad-managed paths; proceeding."
   else
-    error "uncommitted changes detected and stdin is not interactive; run interactively to confirm or pass --yes to proceed"
+    echo "Warning: uncommitted changes overlap squad-managed paths:" >&2
+    printf '%s\n' "$OVERLAP" | sed 's/^/  /' >&2
+    if [ "$ASSUME_YES" = true ]; then
+      :
+    elif [ -t 0 ]; then
+      printf '%s' "Continue? [y/N] "
+      read -r confirm || true
+      case "$confirm" in
+        y|Y) ;;
+        *) error "installation cancelled by user" ;;
+      esac
+    else
+      error "uncommitted changes overlap squad-managed paths and stdin is not interactive; commit them or pass --yes to proceed"
+    fi
   fi
 fi
 

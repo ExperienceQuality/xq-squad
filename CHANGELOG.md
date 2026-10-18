@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.2]
+
+### Fixed
+
+- Install/update no longer require confirmation or `--yes` for uncommitted changes that don't overlap squad-managed paths (`AGENTS.md`, `.devin/`, `.squad/`). Only overlapping dirty files prompt or fail non-interactively.
+
 ## [1.0.1]
 
 ### Fixed
