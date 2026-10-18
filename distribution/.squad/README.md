@@ -25,11 +25,13 @@ AGENTS.md                          # Always-on Lead instructions, managed sectio
 
 ## How to use
 
-1. Install a pinned release with `install.sh --target . --version v1.0.0`.
-2. Use Devin chat in the consumer repository.
-3. The Lead reads this README, follows `agents/lead.md`, and invokes `squad-delivery` skill when useful.
-4. Specialist profiles in `.devin/agents/` can be delegated to when Devin supports subagents.
-5. Sequential execution is the fallback when delegation is unavailable.
+1. Install a pinned release: `install.sh --target . --version v1.0.3` (or `curl -LsSf <release>/install.sh | sh -s -- --target . --version v1.0.3`).
+2. Open Devin chat on this repository and describe the task in plain language — no commands or special syntax needed. The installed `AGENTS.md` makes Devin the Agent Lead automatically.
+3. The Lead reads this README, follows `agents/lead.md`, and invokes the `squad-delivery` skill when useful.
+4. Specialist profiles in `.devin/agents/` are delegated to when Devin supports custom subagents; otherwise the Lead performs each role sequentially.
+5. Every delivery reports what changed, which checks ran, review findings, and memory status (`UPDATED`, `UNCHANGED`, or `BLOCKED`).
+6. The Lead never commits, pushes, or opens a PR unless explicitly asked in the session.
+7. Upgrade with `update.sh --target . --version vX.Y.Z`. Managed files update safely; `.squad/MEMORY.md`, `.squad/knowledge/`, `.squad/memory/`, and `.devin/*/local-*` are never touched.
 
 ## Customization
 

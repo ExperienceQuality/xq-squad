@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.3]
+
+### Added
+
+- Consumer usage documentation: "Using the squad" and "Updating" sections in README covering Devin chat usage, delegation fallback, memory, and authority boundaries; expanded "How to use" in `.squad/README.md` shipped to consumers.
+
+### Changed
+
+- `update.sh` is now published as a release asset, so upgrades can be piped via `curl | sh` like installs.
+
 ## [1.0.2]
 
 ### Fixed
