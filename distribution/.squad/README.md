@@ -25,13 +25,53 @@ AGENTS.md                          # Always-on Lead instructions, managed sectio
 
 ## How to use
 
-1. Install a pinned release: `install.sh --target . --version v1.0.3` (or `curl -LsSf <release>/install.sh | sh -s -- --target . --version v1.0.3`).
+1. Install a pinned release: `install.sh --target . --version v1.0.4` (or `curl -LsSf <release>/install.sh | sh -s -- --target . --version v1.0.4`).
 2. Open Devin chat on this repository and describe the task in plain language — no commands or special syntax needed. The installed `AGENTS.md` makes Devin the Agent Lead automatically.
 3. The Lead reads this README, follows `agents/lead.md`, and invokes the `squad-delivery` skill when useful.
 4. Specialist profiles in `.devin/agents/` are delegated to when Devin supports custom subagents; otherwise the Lead performs each role sequentially.
 5. Every delivery reports what changed, which checks ran, review findings, and memory status (`UPDATED`, `UNCHANGED`, or `BLOCKED`).
 6. The Lead never commits, pushes, or opens a PR unless explicitly asked in the session.
 7. Upgrade with `update.sh --target . --version vX.Y.Z`. Managed files update safely; `.squad/MEMORY.md`, `.squad/knowledge/`, `.squad/memory/`, and `.devin/*/local-*` are never touched.
+
+## How it works
+
+Squad components inside the consumer repository:
+
+```mermaid
+flowchart TD
+    U[User prompt in Devin chat] --> L[Agent Lead<br/>main session]
+    A[AGENTS.md<br/>always-on contract] --> L
+    L --> SK[squad-delivery skill]
+    SK --> WF[delivery workflow<br/>8 stages]
+    L -->|delegate| AN[analyst]
+    L -->|delegate| IM[implementer]
+    L -->|delegate| TE[tester]
+    L -->|delegate| RE[reviewer]
+    L -->|delegate| MM[memory-maintainer]
+    AN & IM & TE & RE & MM -.->|fallback: Lead embodies role| L
+    L <--> MEM[(.squad/MEMORY.md<br/>memory/*.ndjson)]
+```
+
+Delivery lifecycle. Any stage may end the run with `FAILED`, `CANCELLED`,
+or `BLOCKED`:
+
+```mermaid
+stateDiagram-v2
+    [*] --> INTAKE
+    INTAKE --> DISCOVERY
+    DISCOVERY --> PLANNING
+    PLANNING --> EXECUTION
+    EXECUTION --> INTEGRATION
+    INTEGRATION --> VERIFICATION
+    VERIFICATION --> MEMORY_UPDATE
+    MEMORY_UPDATE --> DELIVERY
+    DELIVERY --> [*]
+    INTAKE --> BLOCKED
+    EXECUTION --> FAILED
+    INTEGRATION --> FAILED
+    VERIFICATION --> FAILED
+    EXECUTION --> CANCELLED
+```
 
 ## Customization
 

@@ -58,7 +58,7 @@ Report:
 - Memory-maintenance status.
 - Remaining blockers.
 
-Do not push, commit, or open a PR unless authorized.
+Do not push, commit, or open a PR unless authorized. Before any authorized push or PR creation, fetch the configured remote and rebase the working branch onto the current remote target branch. Resolve conflicts and rerun verification; if the rebase cannot complete, report `BLOCKED` and do not push or open a PR.
 
 ## Delegation fallback
 
