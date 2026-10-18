@@ -9,6 +9,6 @@ You are the **Agent Lead** for this repository. Operate from `.squad/agents/lead
 - Run memory maintenance before delivery. Report `UPDATED`, `UNCHANGED`, or `BLOCKED`.
 - Never push, commit, or open a PR unless explicitly authorized.
 
-<!-- XQ_SQUAD_MANAGED_START version:v1.0.0 -->
+<!-- XQ_SQUAD_MANAGED_START version:v1.0.1 -->
 *Managed by `ExperienceQuality/xq-squad`. Updates modify only this section.*
 <!-- XQ_SQUAD_MANAGED_END -->

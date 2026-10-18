@@ -48,9 +48,17 @@ error() {
   exit 1
 }
 
-for cmd in git curl tar shasum node; do
+for cmd in git curl tar; do
   command -v "$cmd" >/dev/null 2>&1 || error "required command not found: $cmd"
 done
+command -v node >/dev/null 2>&1 || error "Node.js >= 20 required for upgrade (runs .squad/scripts/upgrade-managed.mjs). Install Node or report issue."
+
+sha256_file() {
+  if command -v shasum >/dev/null 2>&1; then shasum -a 256 "$1" | awk '{print $1}';
+  elif command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk '{print $1}';
+  elif command -v openssl >/dev/null 2>&1; then openssl dgst -sha256 "$1" | awk '{print $NF}';
+  else error "no SHA-256 tool found (need shasum, sha256sum, or openssl)"; fi
+}
 
 [ -d "$TARGET" ] || error "target directory does not exist: $TARGET"
 [ -d "$TARGET/.git" ] || error "target is not a git repository: $TARGET"
@@ -103,7 +111,7 @@ else
 fi
 
 EXPECTED="$(cat "$TMP_DIR/$CHECKSUM_NAME" | tr -d ' \n' | awk '{print $1}')"
-ACTUAL="$(shasum -a 256 "$TMP_DIR/$ARCHIVE_NAME" | awk '{print $1}')"
+ACTUAL="$(sha256_file "$TMP_DIR/$ARCHIVE_NAME")"
 [ "$EXPECTED" = "$ACTUAL" ] || error "checksum mismatch"
 
 # Extract new release. Resolve to the physical path so the helper scripts'

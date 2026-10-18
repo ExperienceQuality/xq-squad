@@ -8,6 +8,14 @@ This repository is the package source. Consumers receive only `distribution/` fi
 - Edit tooling, tests, and docs at the repository root.
 - Do not place source-only files like `install.sh`, `tests/`, or `.gitignore` inside `distribution/`.
 
+## Installer portability
+
+`install.sh` and `update.sh` must stay POSIX (`sh`-compatible, pipeable via `curl | sh`) and dependency-light:
+
+- Hard requirements: `git`, `curl`, `tar`, and exactly one SHA-256 tool (`shasum`, `sha256sum`, or `openssl` — detected at runtime via `sha256_file`).
+- Node.js is optional for install (POSIX fallbacks cover the AGENTS.md merge and install-state generation) but required for upgrade (`upgrade-managed.mjs`).
+- Do not add new tool dependencies to the installers without a POSIX fallback.
+
 ## Adding an agent
 
 1. Add portable role contract at `distribution/.squad/agents/<name>.md`.
@@ -39,6 +47,7 @@ bash scripts/validate.sh
 node --test tests/*.test.mjs
 bash tests/install.test.sh
 bash tests/install-pipe.test.sh
+bash tests/install-minimal.test.sh
 bash tests/upgrade.test.sh
 bash tests/e2e.test.sh
 ```

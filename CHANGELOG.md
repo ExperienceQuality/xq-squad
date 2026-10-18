@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.1]
+
+### Fixed
+
+- Installer no longer requires Node.js or shasum (POSIX fallbacks for AGENTS.md merge and install-state; sha256sum/openssl supported).
+
 ## [1.0.0] - 2026-10-17
 
 ### Added
