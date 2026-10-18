@@ -6,6 +6,7 @@
 
 - Mermaid anatomy and delivery-lifecycle diagrams in the repo and distribution READMEs.
 - `docs/ideas/concurrent-delivery.md` — design note for parallel squad deliveries via worktree isolation.
+- Rebase-onto-remote-target requirement before any authorized push or PR (`workflows/delivery.md`, `agents/lead.md`).
 
 ## [1.0.3]
 
