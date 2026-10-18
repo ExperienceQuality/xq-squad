@@ -9,10 +9,14 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP_BASE="$(mktemp -d)"
 trap 'rm -rf "$TMP_BASE"' EXIT
 
-# Build the real v1.0.1 release archive under the normal PATH.
+# Build the release archive matching the distribution version under the
+# normal PATH. Expected values derive from squad.json so version bumps do
+# not require touching this test.
+DIST_VERSION="$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$REPO_ROOT/distribution/.squad/squad.json")"
+DIST_TAG="v${DIST_VERSION}"
 RELEASE_DIR="$TMP_BASE/releases"
-bash "$REPO_ROOT/scripts/package-release.sh" --version v1.0.1 --output "$RELEASE_DIR" >/dev/null
-ARCH="$RELEASE_DIR/squad-v1.0.1.tar.gz"
+bash "$REPO_ROOT/scripts/package-release.sh" --version "$DIST_TAG" --output "$RELEASE_DIR" >/dev/null
+ARCH="$RELEASE_DIR/squad-${DIST_TAG}.tar.gz"
 SUM="$ARCH.sha256"
 
 # Resolve a tool to an absolute path: command -v first (covers builtins that
@@ -58,7 +62,7 @@ run_piped_install() {
   local fakebin="$1" target="$2"
   cat "$REPO_ROOT/install.sh" | env PATH="$fakebin" /bin/sh -s -- \
     --target "$target" \
-    --version v1.0.1 \
+    --version "$DIST_TAG" \
     --archive "$ARCH" \
     --checksum "$SUM" \
     --yes
@@ -76,8 +80,8 @@ check_install() {
   # available here in the test's own PATH).
   node -e "
     const s = JSON.parse(require('fs').readFileSync('$target/.squad/install-state.json', 'utf8'));
-    if (s.version !== '1.0.1') throw new Error('version=' + s.version);
-    if (s.release_tag !== 'v1.0.1') throw new Error('release_tag=' + s.release_tag);
+    if (s.version !== '$DIST_VERSION') throw new Error('version=' + s.version);
+    if (s.release_tag !== '$DIST_TAG') throw new Error('release_tag=' + s.release_tag);
     if (!s.config_schema_version) throw new Error('missing config_schema_version');
     if (!s.memory_schema_version) throw new Error('missing memory_schema_version');
     if (!s.installed_at) throw new Error('missing installed_at');
@@ -85,7 +89,7 @@ check_install() {
     if (!s.ownership || !Array.isArray(s.ownership.upstream_managed)) throw new Error('bad ownership');
     if (!s.managed_files['AGENTS.md']) throw new Error('AGENTS.md not in managed_files');
   "
-  if ! grep -q 'XQ_SQUAD_MANAGED_START version:v1.0.1' "$target/AGENTS.md"; then
+  if ! grep -q "XQ_SQUAD_MANAGED_START version:$DIST_TAG" "$target/AGENTS.md"; then
     echo "managed section missing or wrong version in AGENTS.md" >&2
     exit 1
   fi

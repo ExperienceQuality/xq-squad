@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.4]
+
+### Added
+
+- Mermaid anatomy and delivery-lifecycle diagrams in the repo and distribution READMEs.
+- `docs/ideas/concurrent-delivery.md` — design note for parallel squad deliveries via worktree isolation.
+
 ## [1.0.3]
 
 ### Added

@@ -70,7 +70,7 @@ xq-squad/
 Pipe the installer straight into `sh` (POSIX-compatible, no download needed):
 
 ```bash
-curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v1.0.3/install.sh | sh -s -- --target . --version v1.0.3
+curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v1.0.4/install.sh | sh -s -- --target . --version v1.0.4
 ```
 
 The installer is self-contained: helper scripts ship inside the release archive.
@@ -78,20 +78,20 @@ If the target repo has uncommitted changes and stdin is not a TTY (e.g. piped or
 CI), the installer refuses to continue — pass `--yes` to proceed non-interactively:
 
 ```bash
-curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v1.0.3/install.sh | sh -s -- --target . --version v1.0.3 --yes
+curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v1.0.4/install.sh | sh -s -- --target . --version v1.0.4 --yes
 ```
 
 Or download and run it yourself:
 
 ```bash
-curl -fL https://github.com/ExperienceQuality/xq-squad/releases/download/v1.0.3/install.sh -o /tmp/squad-install.sh
-sh /tmp/squad-install.sh --target . --version v1.0.3
+curl -fL https://github.com/ExperienceQuality/xq-squad/releases/download/v1.0.4/install.sh -o /tmp/squad-install.sh
+sh /tmp/squad-install.sh --target . --version v1.0.4
 ```
 
 Or use a local archive:
 
 ```bash
-bash install.sh --target . --version v1.0.3 --archive squad-v1.0.3.tar.gz --checksum squad-v1.0.3.tar.gz.sha256
+bash install.sh --target . --version v1.0.4 --archive squad-v1.0.4.tar.gz --checksum squad-v1.0.4.tar.gz.sha256
 ```
 
 ## Using the squad
@@ -144,13 +144,13 @@ Pull a newer release into a consumer repo (`install.sh` refuses to run over an
 existing installation — always use `update.sh` for upgrades):
 
 ```bash
-curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v1.0.3/update.sh | sh -s -- --target . --version v1.0.3
+curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v1.0.4/update.sh | sh -s -- --target . --version v1.0.4
 ```
 
 Or, from a clone of this repo:
 
 ```bash
-bash update.sh --target /path/to/consumer-repo --version v1.0.3
+bash update.sh --target /path/to/consumer-repo --version v1.0.4
 ```
 
 `update.sh` requires Node.js ≥ 20 (it runs the three-way merge helper shipped
@@ -173,7 +173,7 @@ bash scripts/validate.sh
 Package a release:
 
 ```bash
-bash scripts/package-release.sh --version v1.0.3
+bash scripts/package-release.sh --version v1.0.4
 ```
 
 Run tests:
@@ -194,6 +194,6 @@ bash tests/e2e.test.sh
    suite, tags the commit, and publishes `install.sh`, the archive, and the
    checksum as release assets automatically.
 4. Or trigger manually via `workflow_dispatch` with an optional `version`
-   input (e.g. `v1.0.0`).
+   input (e.g. `v1.0.4`).
 
 If the tag or release already exists, the workflow skips publishing.
