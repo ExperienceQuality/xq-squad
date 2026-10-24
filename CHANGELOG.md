@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- The Lead contract is now inside the managed `AGENTS.md` section, so it is installed into repositories that already have an `AGENTS.md`. Upgrading repairs v1.0.0–v1.0.4 installs and removes the legacy duplicated block; release packaging stamps the managed marker with the package version.
+
 ## [1.0.4]
 
 ### Added

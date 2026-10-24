@@ -70,6 +70,7 @@ jobs:
         run: |
           bash tests/install.test.sh
           bash tests/install-pipe.test.sh
+          bash tests/install-minimal.test.sh
           bash tests/upgrade.test.sh
           bash tests/e2e.test.sh
 

@@ -94,6 +94,17 @@ while IFS= read -r f; do
   cp "$DIST_DIR/$f" "$target"
 done < "$FILE_LIST"
 
+# Stamp the staged managed section with the release version.
+AGENTS_TMP="$STAGE_DIR/AGENTS.md.tmp"
+sed "s/<!-- XQ_SQUAD_MANAGED_START version:[^ ]*/<!-- XQ_SQUAD_MANAGED_START version:$VERSION/" \
+  "$STAGE_DIR/AGENTS.md" > "$AGENTS_TMP"
+mv "$AGENTS_TMP" "$STAGE_DIR/AGENTS.md"
+
+if ! grep -qF "XQ_SQUAD_MANAGED_START version:$VERSION" "$STAGE_DIR/AGENTS.md"; then
+  echo "Error: staged AGENTS.md does not contain managed marker version $VERSION" >&2
+  exit 1
+fi
+
 # Create deterministic archive: gzip -n avoids timestamp, sorted input keeps order.
 GZIP=-n tar -czf "$ARCHIVE_PATH" -C "$STAGE_DIR" $(cat "$FILE_LIST")
 
