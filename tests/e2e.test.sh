@@ -32,6 +32,47 @@ if [[ ! -f "$CONSUMER/.squad/agents/lead.md" ]]; then
   exit 1
 fi
 
+# Concurrent-delivery helpers installed with their opt-in API intact
+for m in delivery-scope delivery-registry delivery-worktree delivery-session delivery-verify; do
+  if [[ ! -f "$CONSUMER/.squad/scripts/$m.mjs" ]]; then
+    echo "installed concurrent-delivery helper missing: $m.mjs" >&2
+    exit 1
+  fi
+done
+if [[ ! -f "$CONSUMER/.squad/schemas/delivery-session.schema.json" || ! -f "$CONSUMER/.squad/workflows/concurrent-delivery.md" ]]; then
+  echo "concurrent-delivery schema/workflow missing in consumer" >&2
+  exit 1
+fi
+
+# Read-only status works on the installed fixture and never touches the index.
+INDEX_BEFORE="absent"
+if [[ -f "$CONSUMER/.git/index" ]]; then
+  INDEX_BEFORE="$(git -C "$CONSUMER" hash-object --stdin < "$CONSUMER/.git/index")"
+fi
+SQ_CONSUMER="$CONSUMER" node --input-type=module - <<'NODE'
+import { pathToFileURL } from 'node:url';
+import path from 'node:path';
+const consumer = process.env.SQ_CONSUMER;
+if (!consumer) throw new Error('SQ_CONSUMER unset');
+const load = (rel) => import(pathToFileURL(path.join(consumer, rel)).href);
+const s = await load('.squad/scripts/delivery-session.mjs');
+const v = await load('.squad/scripts/delivery-verify.mjs');
+if (typeof s.runSessionCommand !== 'function' || typeof v.captureDeliverySnapshot !== 'function' || typeof v.verifyDeliveryWrites !== 'function') {
+  throw new Error('concurrent-delivery exports missing');
+}
+const r = await s.runSessionCommand('status', { repositoryPath: consumer });
+if (r.status !== 'OK' || !Array.isArray(r.records)) throw new Error('read-only status failed: ' + JSON.stringify(r));
+console.log('read-only status ok; records:', r.records.length);
+NODE
+INDEX_AFTER="absent"
+if [[ -f "$CONSUMER/.git/index" ]]; then
+  INDEX_AFTER="$(git -C "$CONSUMER" hash-object --stdin < "$CONSUMER/.git/index")"
+fi
+if [[ "$INDEX_BEFORE" != "$INDEX_AFTER" ]]; then
+  echo "consumer .git/index changed by read-only status" >&2
+  exit 1
+fi
+
 # Run consumer tests
 cd "$CONSUMER"
 npm test

@@ -2,6 +2,14 @@
 
 Use only when tasks are independent and integration strategy is clear.
 
+## Separate sessions
+
+Separate Devin sessions follow `concurrent-delivery.md`, not an informal
+subagent plan. Each delivery requires user-approved setup, an isolated worktree,
+and an atomic write-scope claim. Overlaps hard-block without override.
+Subagents inherit their Lead's worktree, ownership context, and write scope.
+Neither serial fallback nor unavailable subagents bypass existing claims.
+
 ## When to parallelize
 
 - Independent exploration across unrelated modules.
@@ -36,3 +44,6 @@ Use only when tasks are independent and integration strategy is clear.
 ## Fallback
 
 If custom subagents are unavailable, execute tasks sequentially. Do not let parallelization become a hard requirement.
+
+This fallback changes role execution only; it does not authorize writing in the
+main checkout or releasing another session's claim.

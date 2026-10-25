@@ -23,6 +23,11 @@ bash "$REPO_ROOT/install.sh" \
 # Simulate consumer modification to a managed file (not AGENTS.md)
 echo "# Consumer override" >> "$CONSUMER/.squad/README.md"
 
+# Simulate consumer-owned delivery memory that must survive the upgrade.
+mkdir -p "$CONSUMER/.squad/memory/deliveries"
+printf '{"id":"D1","type":"delivery_event","topic":"t","summary":"consumer memory"}\n' \
+  > "$CONSUMER/.squad/memory/deliveries/demo.ndjson"
+
 # Update to v1.1.0
 bash "$REPO_ROOT/update.sh" \
   --target "$CONSUMER" \
@@ -70,5 +75,19 @@ if ! grep -q 'XQ_SQUAD_MANAGED_START version:v1.1.0' "$LEGACY_CONSUMER/AGENTS.md
   echo "legacy upgrade AGENTS.md marker version is not v1.1.0" >&2
   exit 1
 fi
+
+# Consumer-owned delivery memory preserved across upgrade
+if ! grep -q 'consumer memory' "$CONSUMER/.squad/memory/deliveries/demo.ndjson"; then
+  echo "consumer delivery memory was not preserved across upgrade" >&2
+  exit 1
+fi
+
+# New managed concurrent-delivery helpers present after upgrade
+for m in delivery-scope delivery-registry delivery-worktree delivery-session delivery-verify; do
+  if [[ ! -f "$CONSUMER/.squad/scripts/$m.mjs" ]]; then
+    echo "managed concurrent-delivery helper missing after upgrade: $m.mjs" >&2
+    exit 1
+  fi
+done
 
 echo "upgrade tests passed"

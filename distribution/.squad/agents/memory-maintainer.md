@@ -24,6 +24,15 @@ Report exactly one of:
 
 ## Rules
 
+- With an active concurrent claim, inherit the Lead's worktree, owner context,
+  and write scope. Check ownership before writes and verify outputs afterward.
+- Persist to the claimed `.squad/memory/deliveries/<delivery-id>.ndjson` target,
+  not shared summary/history files unless those exact paths are also reserved.
+  Candidate/temp outputs need scope too. Never write in the main checkout.
+- Retrieve delivery files explicitly with `--source`; do not assume recursive
+  memory discovery. Preserve the existing record schema and distinct stable IDs.
+- A local `UPDATED` outcome does not imply shared canonical reconciliation:
+  explicitly report "canonical integration pending" when applicable.
 - Run even when the correct result is no update.
 - Do not rewrite memory independently of other active agents.
 - Validate NDJSON records against schema.

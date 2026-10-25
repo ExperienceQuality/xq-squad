@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { updateMemory } from '../distribution/.squad/scripts/memory-update.mjs';
@@ -68,4 +68,28 @@ test('superseded record replaces existing', async () => {
   assert.equal(result.ok, true);
   const content = readFileSync(output, 'utf8');
   assert.match(content, /"status":"superseded"/);
+});
+
+test('delivery-local explicit outputPath writes independent files only', async () => {
+  const { input, dir } = setup();
+  const deliveries = join(dir, 'deliveries');
+  mkdirSync(deliveries);
+  const deliveryOut = join(deliveries, 'delivery-demo.ndjson');
+  const rec = JSON.stringify({ id: 'D1', type: 'delivery_event', topic: 't', summary: 'delivery local', status: 'active', created_at: '2025-01-01T00:00:00Z' });
+  writeFileSync(input, rec + '\n');
+  const result = await updateMemory(input, deliveryOut, { schemaPath: join(dir, 'schema.json') });
+  assert.equal(result.ok, true);
+  const content = readFileSync(deliveryOut, 'utf8');
+  assert.match(content, /"id":"D1"/);
+
+  // A second delivery-local file stays independent of the first.
+  const other = join(deliveries, 'delivery-other.ndjson');
+  writeFileSync(input, JSON.stringify({ id: 'D2', type: 'delivery_event', topic: 't', summary: 'other', status: 'active', created_at: '2025-01-01T00:00:00Z' }) + '\n');
+  const r2 = await updateMemory(input, other, { schemaPath: join(dir, 'schema.json') });
+  assert.equal(r2.ok, true);
+  assert.equal(readFileSync(deliveryOut, 'utf8'), content, 'first delivery file untouched');
+  assert.match(readFileSync(other, 'utf8'), /"id":"D2"/);
+
+  // The shared store path was never written by these delivery-local updates.
+  assert.equal(existsSync(join(dir, 'lessons.ndjson')), false);
 });

@@ -16,6 +16,11 @@ error() {
 [[ -f "$DIST_DIR/.squad/squad.json" ]] || error ".squad/squad.json missing"
 [[ -f "$DIST_DIR/.squad/schemas/memory-record.schema.json" ]] || error "memory schema missing"
 [[ -f "$DIST_DIR/.squad/schemas/squad-config.schema.json" ]] || error "config schema missing"
+[[ -f "$DIST_DIR/.squad/schemas/delivery-session.schema.json" ]] || error "delivery-session schema missing"
+[[ -f "$DIST_DIR/.squad/workflows/concurrent-delivery.md" ]] || error "concurrent-delivery workflow missing"
+for m in delivery-scope delivery-registry delivery-worktree delivery-session delivery-verify; do
+  [[ -f "$DIST_DIR/.squad/scripts/$m.mjs" ]] || error "concurrent-delivery helper missing: .squad/scripts/$m.mjs"
+done
 [[ -f "$DIST_DIR/.devin/skills/squad-delivery/SKILL.md" ]] || error "delivery skill missing"
 [[ -f "$DIST_DIR/.squad/agents/lead.md" ]] || error "Lead contract missing"
 
@@ -61,6 +66,26 @@ done
 # Validate squad.json against schema
 if [[ -f "$DIST_DIR/.squad/squad.json" && -f "$DIST_DIR/.squad/schemas/squad-config.schema.json" ]]; then
   node "${REPO_ROOT}/scripts/validate-squad-config.mjs" "$DIST_DIR/.squad/schemas/squad-config.schema.json" "$DIST_DIR/.squad/squad.json" || error "squad.json does not validate against squad-config.schema.json"
+fi
+
+# Concurrent-delivery helpers: import/export sanity (opt-in feature, Node >= 20)
+if command -v node >/dev/null 2>&1; then
+  if ! SQ_DIST="$DIST_DIR" node --input-type=module - 2>/dev/null <<'NODE'
+import { pathToFileURL } from 'node:url';
+import path from 'node:path';
+const dist = process.env.SQ_DIST;
+if (!dist) throw new Error('SQ_DIST unset');
+const load = (rel) => import(pathToFileURL(path.join(dist, rel)).href);
+const s = await load('.squad/scripts/delivery-session.mjs');
+const r = await load('.squad/scripts/delivery-registry.mjs');
+const v = await load('.squad/scripts/delivery-verify.mjs');
+if (typeof s.runSessionCommand !== 'function') throw new Error('missing runSessionCommand');
+if (typeof r.readRegistry !== 'function' || typeof r.withRegistryLock !== 'function' || typeof r.readOwnedClaim !== 'function') throw new Error('missing registry exports');
+if (typeof v.captureDeliverySnapshot !== 'function' || typeof v.verifyDeliveryWrites !== 'function') throw new Error('missing verifier exports');
+NODE
+  then
+    error "concurrent-delivery helpers fail import/export sanity"
+  fi
 fi
 
 # No forbidden executables in distribution

@@ -1,5 +1,16 @@
 # Concurrent Squad Deliveries — Worktree Isolation
 
+> **Superseded design note (2026-10):** this was the original brainstorm; the
+> approved contract is now
+> [`docs/spec-concurrent-delivery.md`](../spec-concurrent-delivery.md).
+> Design points superseded by the spec include: asymmetric first-claimant
+> main-checkout isolation (all deliveries now get worktrees), TTL/heartbeat
+> expiry of claims (stale claims block until explicitly released), warn-mode
+> conflict handling (conflicts hard-block with no override), glob-style scope
+> entries (literal file/tree/root entries only), and main-checkout memory
+> writes (delivery-local memory files under `.squad/memory/deliveries/`).
+> The body below is preserved as historical context only.
+
 ## Problem Statement
 
 How might we let multiple squad projects run in parallel in the same
