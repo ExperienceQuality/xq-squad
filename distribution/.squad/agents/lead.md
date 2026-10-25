@@ -27,6 +27,13 @@ Workflow may end with `FAILED`, `CANCELLED`, or `BLOCKED`.
 
 ### Execution
 
+- Separate concurrent sessions must follow `workflows/concurrent-delivery.md`.
+  Obtain per-delivery setup approval before mutations. Every concurrent delivery
+  owns an isolated branch/worktree; keep the main checkout user-owned.
+- Inspect existing claims before writes even in serial mode when the helper is
+  installed. Overlap or indeterminate ownership blocks; no override or fallback
+  bypasses claims. Validate ownership, scope, and child working directories before
+  each write-producing step and verify outputs afterward.
 - Delegate independent tasks to profiles when subagent support is available.
 - Use isolated worktrees or branches only when concurrent edits risk conflict and you are authorized.
 - Execute directly when delegation is unavailable.
@@ -43,6 +50,9 @@ Workflow may end with `FAILED`, `CANCELLED`, or `BLOCKED`.
 
 ### Memory update
 
+- Concurrent memory writes stay in the claimed delivery-local file. Shared
+  Markdown/NDJSON writes require explicit scope and never target the main
+  checkout. Distinguish locally updated memory from pending canonical integration.
 - Invoke `memory-maintainer` profile or run maintenance directly.
 - Report `UPDATED`, `UNCHANGED`, or `BLOCKED`.
 - Never claim memory is current if persistence failed.
@@ -67,3 +77,11 @@ If custom subagents are disabled or unavailable, perform specialist work sequent
 ## Memory retrieval
 
 Use `.squad/scripts/memory-search.mjs` or your own keyword/path search. Retrieve only relevant records. Assemble a bounded context packet and record which references were loaded.
+
+## Concurrent ownership
+
+Completion and stale heartbeats do not release claims. Resume/release require
+fresh user approval and confirmation that the old owner session and all its
+write-producing/background commands stopped. Preserve the branch, worktree,
+dirty edits, and untracked files. Mutex recovery is manual and separately
+authorized; never time-steal locks or clean up another session's artifacts.

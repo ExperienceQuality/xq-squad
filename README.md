@@ -70,7 +70,7 @@ xq-squad/
 Pipe the installer straight into `sh` (POSIX-compatible, no download needed):
 
 ```bash
-curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v1.0.4/install.sh | sh -s -- --target . --version v1.0.4
+curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v1.1.0/install.sh | sh -s -- --target . --version v1.1.0
 ```
 
 The installer is self-contained: helper scripts ship inside the release archive.
@@ -78,20 +78,20 @@ If the target repo has uncommitted changes and stdin is not a TTY (e.g. piped or
 CI), the installer refuses to continue — pass `--yes` to proceed non-interactively:
 
 ```bash
-curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v1.0.4/install.sh | sh -s -- --target . --version v1.0.4 --yes
+curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v1.1.0/install.sh | sh -s -- --target . --version v1.1.0 --yes
 ```
 
 Or download and run it yourself:
 
 ```bash
-curl -fL https://github.com/ExperienceQuality/xq-squad/releases/download/v1.0.4/install.sh -o /tmp/squad-install.sh
-sh /tmp/squad-install.sh --target . --version v1.0.4
+curl -fL https://github.com/ExperienceQuality/xq-squad/releases/download/v1.1.0/install.sh -o /tmp/squad-install.sh
+sh /tmp/squad-install.sh --target . --version v1.1.0
 ```
 
 Or use a local archive:
 
 ```bash
-bash install.sh --target . --version v1.0.4 --archive squad-v1.0.4.tar.gz --checksum squad-v1.0.4.tar.gz.sha256
+bash install.sh --target . --version v1.1.0 --archive squad-v1.1.0.tar.gz --checksum squad-v1.1.0.tar.gz.sha256
 ```
 
 ## Using the squad
@@ -138,19 +138,49 @@ by upgrades.
 **Authority:** the Lead never commits, pushes, or opens a PR unless you
 explicitly ask it to in the session.
 
+### Concurrent deliveries (unreleased)
+
+An opt-in protocol lets **separate Devin sessions** deliver independent squad
+projects in the same consumer repository without colliding — see
+[`distribution/.squad/workflows/concurrent-delivery.md`](distribution/.squad/workflows/concurrent-delivery.md)
+for the operating procedure.
+
+- Every delivery runs in its own Git worktree at
+  `.squad/worktrees/<delivery-id>` on branch `squad/<delivery-id>` — including
+  the first. Each acquisition requires explicit user approval, and the main
+  checkout (branch, HEAD, index, dirty files) is never touched.
+- Claims live in a shared registry under the repository's common Git
+  directory, so the main checkout and linked worktrees see the same claims.
+- Scope conflicts **hard-block**: overlapping path claims fail acquisition
+  and there is no override. Stale claims do not auto-expire — they keep
+  blocking until released.
+- Interrupted sessions are recovered explicitly: `resume` and `release`
+  require fresh approval plus a stopped-session confirmation, and release
+  preserves the worktree, branch, and dirty/untracked files — nothing is
+  deleted automatically.
+- Requires Node.js ≥ 20, and the delivery's base commit must already contain
+  compatible installed `.squad` helpers — the installer never commits them
+  for you.
+- Not isolated: shared ports, databases, external services, and manual edits
+  outside claimed paths are outside the protocol's scope.
+
+> **Validation status:** verified end-to-end with two real Devin CLI sessions
+> (see `docs/devin-compatibility-report.md`). Claims coordinate cooperating
+> squad sessions only — they cannot police manual edits or unrelated tools.
+
 ## Updating
 
 Pull a newer release into a consumer repo (`install.sh` refuses to run over an
 existing installation — always use `update.sh` for upgrades):
 
 ```bash
-curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v1.0.4/update.sh | sh -s -- --target . --version v1.0.4
+curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v1.1.0/update.sh | sh -s -- --target . --version v1.1.0
 ```
 
 Or, from a clone of this repo:
 
 ```bash
-bash update.sh --target /path/to/consumer-repo --version v1.0.4
+bash update.sh --target /path/to/consumer-repo --version v1.1.0
 ```
 
 `update.sh` requires Node.js ≥ 20 (it runs the three-way merge helper shipped
@@ -173,7 +203,7 @@ bash scripts/validate.sh
 Package a release:
 
 ```bash
-bash scripts/package-release.sh --version v1.0.4
+bash scripts/package-release.sh --version v1.1.0
 ```
 
 Run tests:
@@ -194,6 +224,6 @@ bash tests/e2e.test.sh
    suite, tags the commit, and publishes `install.sh`, the archive, and the
    checksum as release assets automatically.
 4. Or trigger manually via `workflow_dispatch` with an optional `version`
-   input (e.g. `v1.0.4`).
+   input (e.g. `v1.1.0`).
 
 If the tag or release already exists, the workflow skips publishing.

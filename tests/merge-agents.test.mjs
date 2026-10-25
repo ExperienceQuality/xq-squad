@@ -7,6 +7,7 @@ const distributed = readFileSync(new URL('../distribution/AGENTS.md', import.met
 const managedStart = distributed.indexOf('<!-- XQ_SQUAD_MANAGED_START');
 const managedEnd = distributed.indexOf('<!-- XQ_SQUAD_MANAGED_END -->') + '<!-- XQ_SQUAD_MANAGED_END -->'.length;
 const managed = distributed.slice(managedStart, managedEnd);
+const managedVersion = managed.match(/XQ_SQUAD_MANAGED_START version:(v\d+\.\d+\.\d+)/)[1];
 
 const oldManaged = `<!-- XQ_SQUAD_MANAGED_START version:v1.0.0 -->
 old managed content
@@ -45,7 +46,7 @@ test('replaces an existing managed block and keeps consumer content', () => {
   assert.match(result, /# Consumer rules/);
   assert.match(result, /- Keep this rule/);
   assert.doesNotMatch(result, /old managed content/);
-  assert.match(result, /XQ_SQUAD_MANAGED_START version:v1\.0\.4/);
+  assert.match(result, new RegExp(`XQ_SQUAD_MANAGED_START version:${managedVersion.replace(/\./g, '\\.')}`));
   assertLeadCount(result);
 });
 

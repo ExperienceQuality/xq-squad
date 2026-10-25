@@ -1,6 +1,19 @@
 # Changelog
 
-## [Unreleased]
+## [1.1.0] - 2026-10-25
+
+### Added
+
+- Opt-in concurrent delivery protocol for separate Devin sessions in the same
+  consumer repository: approved per-delivery worktree isolation
+  (`.squad/worktrees/<id>` on `squad/<id>`), hard-blocking scope claims in a
+  shared common-dir registry, explicit stopped-confirmation resume/release
+  that preserves work, delivery-write verification, and delivery-local memory
+  sources (`memory-search.mjs --source`). Requires Node.js ≥ 20 in the
+  consumer and a base commit containing compatible installed `.squad` helpers.
+  Validated end-to-end with two real Devin CLI sessions; see
+  `docs/devin-compatibility-report.md` and
+  `distribution/.squad/workflows/concurrent-delivery.md`.
 
 ### Fixed
 

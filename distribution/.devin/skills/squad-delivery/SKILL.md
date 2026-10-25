@@ -26,6 +26,11 @@ Use this skill when the user asks you to build, fix, review, or change something
    - Identify what can run in parallel and what must be sequential.
 
 4. **Execution**
+   - For separate concurrent sessions, follow `.squad/workflows/concurrent-delivery.md`.
+   - Require per-delivery setup approval before creating claims or worktrees.
+     Overlapping scopes block without override; keep the main checkout user-owned.
+   - Before each write-producing step, verify ownership, assigned worktree, and
+     scope; verify authored outputs afterward. Serial mode never bypasses claims.
    - Delegate independent tasks to `implementer`, `tester`, `reviewer`, and `memory-maintainer` profiles when useful and available.
    - If custom subagents are unavailable, execute specialist roles sequentially using the corresponding `.squad/agents/<role>.md` contracts.
 
@@ -38,6 +43,8 @@ Use this skill when the user asks you to build, fix, review, or change something
    - Report passed, failed, skipped, and unexecuted checks.
 
 7. **Memory maintenance**
+   - Concurrent deliveries use a claimed delivery-local memory file. Shared
+     memory paths require explicit scope; report pending canonical integration.
    - Run memory maintenance before delivery.
    - Report outcome: `UPDATED`, `UNCHANGED`, or `BLOCKED`.
 
@@ -50,3 +57,6 @@ Use this skill when the user asks you to build, fix, review, or change something
 - Do not push, commit, or open a PR unless explicitly authorized.
 - Never claim a check passed if it was not observed.
 - Never claim memory is current if the update failed or was blocked.
+- Stale heartbeats and completion never release ownership. Resume/release require
+  user approval plus confirmation that the old session and its commands stopped.
+  Release never deletes branch, worktree, dirty edits, or untracked files.
