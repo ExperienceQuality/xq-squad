@@ -6,6 +6,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$REPO_ROOT/tests/agents-test-helpers.sh"
 TMP_BASE="$(mktemp -d)"
 trap 'rm -rf "$TMP_BASE"' EXIT
 
@@ -124,6 +125,7 @@ if ! grep -q 'existing consumer rule' "$CONSUMER2/AGENTS.md"; then
   echo "existing AGENTS.md content not preserved by POSIX merge" >&2
   exit 1
 fi
+assert_lead_contract_in_managed_section "$CONSUMER2/AGENTS.md"
 
 # --- Scenario 3: openssl only (no sha256sum, no shasum, no node) -------------
 FAKEBIN_SSL="$TMP_BASE/fakebin-openssl"

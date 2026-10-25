@@ -2,6 +2,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$REPO_ROOT/tests/agents-test-helpers.sh"
 TMP_BASE="$(mktemp -d)"
 trap 'rm -rf "$TMP_BASE"' EXIT
 
@@ -23,6 +24,7 @@ if ! grep -q 'Use ESM modules' "$CONSUMER/AGENTS.md"; then
   echo "consumer AGENTS.md not preserved" >&2
   exit 1
 fi
+assert_lead_contract_in_managed_section "$CONSUMER/AGENTS.md"
 
 # Verify squad loaded
 if [[ ! -f "$CONSUMER/.squad/agents/lead.md" ]]; then

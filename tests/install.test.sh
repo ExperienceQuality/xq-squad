@@ -2,6 +2,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$REPO_ROOT/tests/agents-test-helpers.sh"
 TMP_BASE="$(mktemp -d)"
 trap 'rm -rf "$TMP_BASE"' EXIT
 
@@ -19,6 +20,12 @@ bash "$REPO_ROOT/install.sh" \
   --version v1.0.0 \
   --archive "$RELEASE_DIR/squad-v1.0.0.tar.gz" \
   --checksum "$RELEASE_DIR/squad-v1.0.0.tar.gz.sha256"
+
+assert_lead_contract_in_managed_section "$CONSUMER/AGENTS.md"
+if ! grep -q 'XQ_SQUAD_MANAGED_START version:v1.0.0' "$CONSUMER/AGENTS.md"; then
+  echo "fresh install AGENTS.md marker version is not v1.0.0" >&2
+  exit 1
+fi
 
 # Verify key files
 for f in AGENTS.md .squad/squad.json .devin/agents/analyst.md .devin/skills/squad-delivery/SKILL.md; do
@@ -64,5 +71,6 @@ if ! grep -q 'XQ_SQUAD_MANAGED_START' "$CONSUMER2/AGENTS.md"; then
   echo "managed section missing" >&2
   exit 1
 fi
+assert_lead_contract_in_managed_section "$CONSUMER2/AGENTS.md"
 
 echo "install tests passed"
