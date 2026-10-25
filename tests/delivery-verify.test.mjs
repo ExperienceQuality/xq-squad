@@ -239,7 +239,7 @@ test('target advance + rebase: incoming target files are not delivery edits', as
   writeFileSync(join(dir, 'upstream.txt'), 'target change');
   git(['add', 'upstream.txt'], dir);
   git(['-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-m', 'upstream'], dir);
-  git(['rebase', 'main'], ctx.worktreePath);
+  git(['-c', 'user.email=t@t', '-c', 'user.name=t', 'rebase', 'main'], ctx.worktreePath);
 
   // Old baseline is stale (HEAD + resolvedTarget both moved).
   const stale = await verifyDeliveryWrites(ctx, cap.snapshot);
