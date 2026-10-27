@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.0] - 2026-10-28
+
+### Added
+
+- New managed skill `train-python` (`.devin/skills/train-python/SKILL.md`): a
+  patient Python tutor for beginners learning Python for AI development.
+  Registered in `squad.json` under `components.skills`.
+
 ## [1.1.0] - 2026-10-25
 
 ### Added
