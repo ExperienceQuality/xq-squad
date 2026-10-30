@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.2.1] - 2026-10-30
+
+### Fixed
+
+- `update.sh` now installs managed files first shipped by a release. The
+  upgrader previously only iterated the consumer's recorded `managed_files`,
+  so files new to a release — such as `train-me` in v1.2.0 — were never
+  copied or registered. Consumers on v1.2.0 receive `train-me` automatically
+  with this update; a differing consumer file at a new managed path is
+  preserved and reported as a conflict.
+
 ## [1.2.0] - 2026-10-30
 
 ### Added
@@ -8,6 +19,13 @@
   tutor that helps the user learn any technical topic through simple
   explanations, analogies, and guided questions. Registered in `squad.json`
   under `components.skills`.
+
+### Fixed
+
+- Concurrent `acquire` no longer fails permanently on transient registry
+  mutex contention during activation. Mutex-busy results are flagged
+  (`contended: true`) and the activation lock retries briefly before
+  reporting retained-claim recovery.
 
 ## [1.1.0] - 2026-10-25
 
