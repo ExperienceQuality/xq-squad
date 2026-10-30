@@ -1,8 +1,8 @@
 {
   "$schema": "./schemas/squad-config.schema.json",
   "name": "xq-squad",
-  "version": "1.1.0",
-  "release_tag": "v1.1.0",
+  "version": "1.2.0",
+  "release_tag": "v1.2.0",
   "config_schema_version": "1.0.0",
   "memory_schema_version": "1.0.0",
   "repository": "https://github.com/ExperienceQuality/xq-squad",
@@ -49,6 +49,11 @@
       "squad-delivery": {
         "path": "../.devin/skills/squad-delivery/SKILL.md",
         "description": "On-demand delivery workflow skill.",
+        "managed": true
+      },
+      "train-me": {
+        "path": "../.devin/skills/train-me/SKILL.md",
+        "description": "Patient tutor that helps the user learn any technical topic.",
         "managed": true
       }
     },
