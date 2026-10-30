@@ -1,8 +1,8 @@
 {
   "$schema": "./schemas/squad-config.schema.json",
   "name": "xq-squad",
-  "version": "1.2.0",
-  "release_tag": "v1.2.0",
+  "version": "1.2.1",
+  "release_tag": "v1.2.1",
   "config_schema_version": "1.0.0",
   "memory_schema_version": "1.0.0",
   "repository": "https://github.com/ExperienceQuality/xq-squad",
