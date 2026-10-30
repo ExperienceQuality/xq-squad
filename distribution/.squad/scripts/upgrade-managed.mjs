@@ -1,6 +1,6 @@
 import { readFile, writeFile, rename, mkdir, copyFile, access } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { join, dirname, relative } from 'node:path';
+import { join, dirname, relative, sep } from 'node:path';
 
 async function hashFile(path) {
   const hash = createHash('sha256');
@@ -89,6 +89,7 @@ export async function upgradeManaged(targetDir, newDir, version) {
 
   const newFiles = await listFiles(newDir);
   const managedFiles = Object.keys(state.managed_files).filter(p => p !== 'AGENTS.md');
+  const managedSet = new Set(managedFiles);
 
   for (const rel of managedFiles) {
     const consumerPath = join(targetDir, rel);
@@ -140,6 +141,28 @@ export async function upgradeManaged(targetDir, newDir, version) {
     }
   }
 
+  // Files first shipped in this release are absent from the recorded
+  // manifest; adopt them unless an unrelated consumer file already occupies
+  // the path, which is reported rather than overwritten.
+  const adopted = [];
+  for (const abs of newFiles) {
+    const rel = relative(newDir, abs).split(sep).join('/');
+    if (rel === 'AGENTS.md' || managedSet.has(rel)) continue;
+    const consumerPath = join(targetDir, rel);
+    if (!(await exists(consumerPath))) {
+      await mkdir(dirname(consumerPath), { recursive: true });
+      await copyFile(abs, consumerPath);
+      applied.push(rel);
+      adopted.push(rel);
+      continue;
+    }
+    if ((await hashFile(consumerPath)) === (await hashFile(abs))) {
+      adopted.push(rel); // identical bytes already present; register as managed
+    } else {
+      conflicts.push({ file: rel, reason: 'consumer file exists at new managed path' });
+    }
+  }
+
   // Merge AGENTS.md managed section separately
   const agentsResult = await mergeAgents(targetDir, newDir, state, version);
   if (agentsResult.conflicts.length) conflicts.push(...agentsResult.conflicts);
@@ -152,6 +175,9 @@ export async function upgradeManaged(targetDir, newDir, version) {
     if (await exists(consumerPath)) {
       updatedManaged[rel] = await hashFile(consumerPath);
     }
+  }
+  for (const rel of adopted) {
+    updatedManaged[rel] = await hashFile(join(targetDir, rel));
   }
 
   const versionNumber = version.startsWith('v') ? version.slice(1) : version;
