@@ -479,7 +479,12 @@ export async function withRegistryLock({ repositoryPath, approval } = {}, operat
     try {
       await fs.mkdir(lockPath);
     } catch (err) {
-      if (err.code === 'EEXIST') return blocked('RECOVERY_REQUIRED');
+      // A held (or crash-left) mutex is transient contention, not a registry
+      // anomaly — flagged so callers holding a claim can retry the lock
+      // acquisition itself instead of reporting retained-claim recovery.
+      if (err.code === 'EEXIST') {
+        return blocked('RECOVERY_REQUIRED', { contended: true });
+      }
       throw err;
     }
     lockHeld = true;

@@ -54,6 +54,11 @@ const HELPER_MAP = [
 ];
 const BASE_REF_MAX = 256;
 const NODE_MIN_MAJOR = 20;
+// Bounded in-helper retry for mutex acquisition only where the caller cannot
+// retry the command: after a claim exists, a racing acquire retry would hit
+// SCOPE_CONFLICT on its own id/branch rather than re-entering activation.
+const ACTIVATION_LOCK_ATTEMPTS = 40;
+const ACTIVATION_LOCK_DELAY_MS = 20;
 
 function ok(extra = {}) {
   return { status: 'OK', code: 'OK', ...extra };
@@ -83,6 +88,10 @@ function isEvidence(v) {
 
 function isoNow() {
   return new Date().toISOString();
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // ---------- git helpers live in delivery-worktree.mjs ----------
@@ -455,57 +464,65 @@ async function cmdAcquire(params) {
   }
 
   // Activation under a fresh mutex: own PREPARING claim + verified worktree.
-  const activation = await withRegistryLock(
-    { repositoryPath: params.repositoryPath, approval: params.approval },
-    async (ctx) => {
-      const rec = ctx.records.find(
-        (r) =>
-          r.deliveryId === params.deliveryId &&
-          r.ownerToken === ownerToken &&
-          r.generation === 1,
-      );
-      if (!rec || rec.state !== 'PREPARING') {
-        return blocked('RECOVERY_REQUIRED', 'claim state changed during provisioning');
-      }
-      const wtCommon = await gitTry(worktreePath, [
-        'rev-parse',
-        '--path-format=absolute',
-        '--git-common-dir',
-      ]);
-      const wtBranch = await gitTry(worktreePath, ['rev-parse', '--abbrev-ref', 'HEAD']);
-      if (
-        !wtCommon ||
-        realpathSync(wtCommon.trim()) !== ctx.commonDir ||
-        (wtBranch || '').trim() !== branch ||
-        !existsSync(path.join(worktreePath, '.squad/scripts/delivery-session.mjs'))
-      ) {
+  // Mutex contention here is as transient as the reservation's, but the
+  // caller cannot retry acquire once a claim exists — so the lock attempt
+  // itself retries briefly before reporting retained-claim recovery.
+  let activation;
+  for (let attempt = 0; ; attempt += 1) {
+    activation = await withRegistryLock(
+      { repositoryPath: params.repositoryPath, approval: params.approval },
+      async (ctx) => {
+        const rec = ctx.records.find(
+          (r) =>
+            r.deliveryId === params.deliveryId &&
+            r.ownerToken === ownerToken &&
+            r.generation === 1,
+        );
+        if (!rec || rec.state !== 'PREPARING') {
+          return blocked('RECOVERY_REQUIRED', 'claim state changed during provisioning');
+        }
+        const wtCommon = await gitTry(worktreePath, [
+          'rev-parse',
+          '--path-format=absolute',
+          '--git-common-dir',
+        ]);
+        const wtBranch = await gitTry(worktreePath, ['rev-parse', '--abbrev-ref', 'HEAD']);
+        if (
+          !wtCommon ||
+          realpathSync(wtCommon.trim()) !== ctx.commonDir ||
+          (wtBranch || '').trim() !== branch ||
+          !existsSync(path.join(worktreePath, '.squad/scripts/delivery-session.mjs'))
+        ) {
+          const write = await ctx.writeRecord({
+            ...record,
+            state: 'RECOVERY_REQUIRED',
+            failure: { reason: 'provisioned worktree failed verification' },
+          });
+          if (write.status !== 'OK') return write;
+          return blocked('RECOVERY_REQUIRED', 'provisioned worktree failed verification; claim retained');
+        }
         const write = await ctx.writeRecord({
           ...record,
-          state: 'RECOVERY_REQUIRED',
-          failure: { reason: 'provisioned worktree failed verification' },
+          state: 'ACTIVE',
+          heartbeatAt: isoNow(),
         });
         if (write.status !== 'OK') return write;
-        return blocked('RECOVERY_REQUIRED', 'provisioned worktree failed verification; claim retained');
-      }
-      const write = await ctx.writeRecord({
-        ...record,
-        state: 'ACTIVE',
-        heartbeatAt: isoNow(),
-      });
-      if (write.status !== 'OK') return write;
-      return ok({
-        deliveryId: params.deliveryId,
-        ownerToken,
-        generation: 1,
-        worktreePath,
-        branch,
-        baseCommit,
-      });
-    },
-  );
+        return ok({
+          deliveryId: params.deliveryId,
+          ownerToken,
+          generation: 1,
+          worktreePath,
+          branch,
+          baseCommit,
+        });
+      },
+    );
+    if (activation.contended !== true || attempt >= ACTIVATION_LOCK_ATTEMPTS) break;
+    await delay(ACTIVATION_LOCK_DELAY_MS);
+  }
   if (activation.status !== 'OK') {
-    // The claim (and possibly the worktree) already exists — this is not a
-    // retryable contention; report retained-claim recovery explicitly.
+    // The claim (and possibly the worktree) already exists — acquisition
+    // cannot be retried by the caller; report retained-claim recovery.
     return {
       ...activation,
       deliveryId: params.deliveryId,
