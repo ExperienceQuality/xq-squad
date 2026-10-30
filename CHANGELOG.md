@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.2.0] - 2026-10-30
+
+### Added
+
+- New managed skill `train-me` (`.devin/skills/train-me/SKILL.md`): a patient
+  tutor that helps the user learn any technical topic through simple
+  explanations, analogies, and guided questions. Registered in `squad.json`
+  under `components.skills`.
+
 ## [1.1.0] - 2026-10-25
 
 ### Added
