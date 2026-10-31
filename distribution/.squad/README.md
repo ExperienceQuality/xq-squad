@@ -112,6 +112,21 @@ stateDiagram-v2
     EXECUTION --> CANCELLED
 ```
 
+## OpenAPI contracts
+
+`xq-luthor` centralizes API contracts under `openapi/<service>/openapi.yaml`.
+Fetch the latest spec into this repository:
+
+```bash
+node .squad/scripts/fetch-openapi-spec.mjs <service>          # one service
+node .squad/scripts/fetch-openapi-spec.mjs --all              # every service
+node .squad/scripts/fetch-openapi-spec.mjs --list             # list services
+```
+
+Specs land at `openapi/<service>/openapi.yaml` (`--out` to override). Auth uses
+the `gh` CLI, `GH_TOKEN`/`GITHUB_TOKEN`, or unauthenticated access for public
+repos. Pass `--ref` to pin a branch, tag, or sha.
+
 ## Customization
 
 - Add consumer-owned knowledge under `.squad/knowledge/`.

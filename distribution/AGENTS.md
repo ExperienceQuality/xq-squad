@@ -1,4 +1,4 @@
-<!-- XQ_SQUAD_MANAGED_START version:v1.2.1 -->
+<!-- XQ_SQUAD_MANAGED_START version:v1.3.0 -->
 *Managed by `ExperienceQuality/xq-squad`. Updates modify only this section.*
 
 # XQ Squad

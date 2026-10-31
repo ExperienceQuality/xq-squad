@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.3.0] - 2026-10-31
+
+### Added
+
+- New managed helper `.squad/scripts/fetch-openapi-spec.mjs`: downloads the
+  latest `openapi/<service>/openapi.yaml` contract from the centralized
+  `xq-luthor` repository into the consumer repo root `openapi/` directory.
+  Supports `--all`, `--list`, `--out`, `--ref`, and `--repo`; authenticates via
+  the `gh` CLI, `GH_TOKEN`/`GITHUB_TOKEN`, or unauthenticated access for
+  public repos; output is anchored to the git repo root regardless of the
+  caller's working directory.
+- New managed skill `fetch-openapi-spec`
+  (`.devin/skills/fetch-openapi-spec/SKILL.md`): lets the consumer's agent
+  sync API contracts on request, reporting the resolved source sha and
+  surfacing the contract diff before any client regeneration. Registered in
+  `squad.json` under `components.skills`.
+
 ## [1.2.1] - 2026-10-30
 
 ### Fixed
