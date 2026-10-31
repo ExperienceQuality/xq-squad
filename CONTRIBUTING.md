@@ -40,6 +40,15 @@ Classify every change:
 - **Minor**: additive agent/skill/rule, optional field, backward-compatible workflow.
 - **Major**: rename/removal, incompatible schema, ownership change, changed required behavior.
 
+## Version bumps
+
+- Bump `version` and `release_tag` together in `distribution/.squad/squad.json`.
+- In the same change, update every `vX.Y.Z` pin in `README.md` — release-asset
+  URLs, `--version` flags, and archive filenames. `scripts/validate.sh` fails
+  on any pin that does not match `release_tag`, and the release workflow runs
+  it before tagging.
+- Update `CHANGELOG.md`.
+
 ## Required checks
 
 ```bash
