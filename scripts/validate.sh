@@ -88,6 +88,21 @@ NODE
   fi
 fi
 
+# README version pins (release-asset URLs, --version flags, archive names)
+# must track squad.json release_tag. On a version bump the README snippets
+# are updated in the same change; this runs before tagging in the release
+# workflow, so a stale pin blocks the release instead of shipping it.
+if [[ -f "$REPO_ROOT/README.md" && -f "$DIST_DIR/.squad/squad.json" ]]; then
+  RELEASE_TAG="$(sed -n 's/.*"release_tag"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$DIST_DIR/.squad/squad.json")"
+  if [[ -n "$RELEASE_TAG" ]]; then
+    while IFS= read -r pin; do
+      [[ -z "$pin" ]] && continue
+      [[ "$pin" == "$RELEASE_TAG" ]] || \
+        error "README pins $pin but squad.json release_tag is $RELEASE_TAG — sync README version snippets on version bump"
+    done < <(grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' "$REPO_ROOT/README.md" | sort -u)
+  fi
+fi
+
 # No forbidden executables in distribution
 find "$DIST_DIR" -type f \( -name '*.py' -o -name '*.rb' -o -name '*.pl' -o -name '*.exe' -o -name '*.bin' \) -print | while read -r f; do
   error "forbidden executable file in distribution: $f"
