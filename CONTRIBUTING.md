@@ -43,10 +43,11 @@ Classify every change:
 ## Version bumps
 
 - Bump `version` and `release_tag` together in `distribution/.squad/squad.json`.
-- In the same change, update every `vX.Y.Z` pin in `README.md` — release-asset
-  URLs, `--version` flags, and archive filenames. `scripts/validate.sh` fails
-  on any pin that does not match `release_tag`, and the release workflow runs
-  it before tagging.
+- In the same change, update every `vX.Y.Z` pin in `README.md` and
+  `distribution/.squad/README.md` — release-asset URLs, `--version` flags,
+  archive filenames, and the current-release lines. `scripts/validate.sh`
+  fails on any pin that does not match `release_tag`, and the release workflow
+  runs it before tagging.
 - Update `CHANGELOG.md`.
 
 ## Required checks
