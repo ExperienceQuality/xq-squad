@@ -105,8 +105,15 @@ if ! grep -qF "XQ_SQUAD_MANAGED_START version:$VERSION" "$STAGE_DIR/AGENTS.md"; 
   exit 1
 fi
 
-# Create deterministic archive: gzip -n avoids timestamp, sorted input keeps order.
-GZIP=-n tar -czf "$ARCHIVE_PATH" -C "$STAGE_DIR" $(cat "$FILE_LIST")
+# Create deterministic archive: fixed mtimes and ownership, sorted input, and
+# gzip -n (no name/timestamp) so the same distribution yields the same checksum.
+while IFS= read -r f; do touch -t 202001010000.00 "$STAGE_DIR/$f"; done < "$FILE_LIST"
+if tar --version 2>/dev/null | grep -q 'GNU tar'; then
+  TAR_OWNER=(--owner=0 --group=0 --numeric-owner)
+else
+  TAR_OWNER=(--uid 0 --gid 0 --numeric-owner)
+fi
+tar -cf - "${TAR_OWNER[@]}" -C "$STAGE_DIR" $(cat "$FILE_LIST") | gzip -n > "$ARCHIVE_PATH"
 
 # Generate checksum.
 shasum -a 256 "$ARCHIVE_PATH" | awk '{print $1}' > "$CHECKSUM_PATH"

@@ -1,9 +1,9 @@
 # Concurrent Delivery Workflow
 
-Opt-in coordination for separate Devin sessions in one local Git repository.
+Opt-in coordination for separate agent sessions (Devin, Cursor, or mixed) in one local Git repository.
 Each session remains its own Lead. There is no shared Lead or background coordinator.
 This workflow requires Node.js >=20 and compatible installed delivery helpers.
-Scripted tests do not establish compatibility with two actual Devin sessions.
+Scripted tests do not establish compatibility with two actual runtime sessions.
 
 ## Safety contract
 
@@ -160,7 +160,7 @@ never to conceal an existing scope violation.
 Completion does not release the claim. To release or transfer ownership, ask
 the user to explicitly confirm that the previous owner session AND all its
 write-producing/background commands have stopped, and approve the operation.
-Do not claim to have stopped a separate Devin session unless observed.
+Do not claim to have stopped a separate agent session unless observed.
 
 `resume` and `release` take delivery ID, `expectedGeneration`, approval, and
 stopped confirmation; a lost old token is not required. A concurrent ownership

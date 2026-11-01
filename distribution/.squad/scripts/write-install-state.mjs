@@ -1,9 +1,11 @@
 import { writeFile, mkdir } from 'node:fs/promises';
 import { readFile } from 'node:fs/promises';
-import { createReadStream } from 'node:fs';
+import { createReadStream, existsSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { createHash } from 'node:crypto';
 import { join, relative } from 'node:path';
+
+const MANAGED_PREFIXES = ['.devin/', '.squad/', '.cursor/'];
 
 async function hashFile(path) {
   const hash = createHash('sha256');
@@ -44,9 +46,17 @@ export async function writeInstallState(targetDir, version, extractDir) {
       managedFiles[rel] = await hashFile(file);
       continue;
     }
-    if (rel.startsWith('.devin/') || rel.startsWith('.squad/')) {
-      managedFiles[rel] = await hashFile(file);
+    if (!MANAGED_PREFIXES.some((p) => rel.startsWith(p))) continue;
+    const installed = join(targetDir, rel);
+    if (rel === '.cursor/hooks.json') {
+      // Merge-managed: record the merged result actually on disk.
+      managedFiles[rel] = await hashFile(existsSync(installed) ? installed : file);
+      continue;
     }
+    const hash = await hashFile(file);
+    // A pre-existing consumer file kept at install time stays consumer-owned.
+    if (existsSync(installed) && (await hashFile(installed)) !== hash) continue;
+    managedFiles[rel] = hash;
   }
 
   const squadJsonPath = join(extractDir, '.squad', 'squad.json');

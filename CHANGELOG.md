@@ -1,5 +1,43 @@
 # Changelog
 
+## [1.4.0] - Unreleased
+
+### Added
+
+- Cursor runtime adapter, installed alongside the Devin adapter:
+  `.cursor/rules/xq-squad.mdc` (always-on Lead rule), `.cursor/agents/`
+  (analyst, implementer, tester, reviewer, memory-maintainer subagents that
+  reference `.squad/agents/<role>.md`), `.cursor/skills/` (same skills as
+  `.devin/skills/`), and `.cursor/hooks.json` with three hooks:
+  `xq-squad-git-guard` (asks before commit/push/PR/release),
+  `xq-squad-scope-guard` (denies writes outside a concurrent delivery's
+  claimed scope; fails closed inside a delivery worktree), and
+  `xq-squad-verify-reminder` (one verification follow-up on stop).
+- `squad.json` `runtimes` catalog plus `cursor_profile`/`cursor_path`,
+  `rules`, and `hooks` components; Cursor ownership patterns.
+- `.squad/scripts/merge-cursor-hooks.mjs`: merge-managed `.cursor/hooks.json`.
+- `scripts/validate-cursor-adapter.mjs` (run by `validate.sh`), and tests
+  `tests/cursor-adapter.test.mjs` and `tests/install-cursor.test.sh`.
+- Docs: `docs/architecture.md`, `docs/cursor-integration.md`,
+  `docs/cursor-compatibility-report.md`.
+
+### Changed
+
+- Canonical `.squad/` contracts are runtime-neutral ("agent session" instead
+  of "Devin session"); behavior is unchanged.
+- `install.sh` copies adapter directories file by file. A differing existing
+  consumer file is kept, the release copy written to `<file>.squad-upstream`,
+  and the file stays consumer-owned.
+- Release archives are byte-for-byte reproducible (fixed mtimes/ownership).
+
+### Fixed
+
+- `update.sh` no longer overwrites consumer edits when upstream also changed
+  a managed file. The old merge used the consumer file as its base, so
+  upstream silently won. Now the consumer file is kept, upstream is written
+  to `<file>.squad-upstream`, the conflict is reported, and the recorded
+  baseline is not advanced, so the edit stays detected on later updates.
+
 ## [1.3.0] - 2026-10-31
 
 ### Added

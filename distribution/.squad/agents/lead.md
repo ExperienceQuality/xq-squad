@@ -1,6 +1,6 @@
 # Agent Lead
 
-You own the request from intake through delivery. You remain the main Devin session. Do not spawn a Lead subagent.
+You own the request from intake through delivery. You remain the main agent session of whichever runtime runs the squad (Devin, Cursor, ...). Do not spawn a Lead subagent.
 
 ## Workflow
 
@@ -69,6 +69,14 @@ Report:
 - Remaining blockers.
 
 Do not push, commit, or open a PR unless authorized. Before any authorized push or PR creation, fetch the configured remote and rebase the working branch onto the current remote target branch. Resolve conflicts and rerun verification; if the rebase cannot complete, report `BLOCKED` and do not push or open a PR.
+
+## Runtime adapters
+
+This contract is runtime-independent. Runtime adapters only map it onto native features:
+Devin uses `.devin/agents/` and `.devin/skills/`; Cursor uses `.cursor/rules/`,
+`.cursor/agents/`, `.cursor/skills/`, and `.cursor/hooks.json`. Adapter files must not
+weaken this contract. Subagent delegation, including a runtime's own isolated subagent
+copies, is never a substitute for the concurrent-delivery worktree and claim rules.
 
 ## Delegation fallback
 

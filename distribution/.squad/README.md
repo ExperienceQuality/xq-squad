@@ -1,6 +1,6 @@
 # XQ Squad
 
-Repository-native Devin subagent squad. No hosted service. No database. Devin chat is the interface.
+Repository-native agent squad for Devin and Cursor. No hosted service. No database. Devin chat or the Cursor Agent is the interface. This `.squad/` directory is the canonical, runtime-independent source of truth; `.devin/` and `.cursor/` only adapt it to each runtime and must not weaken it.
 
 ## Layout
 
@@ -9,6 +9,11 @@ AGENTS.md                          # Always-on Lead instructions, managed sectio
 .devin/
   agents/                          # Native Devin subagent profiles
   skills/squad-delivery/SKILL.md   # On-demand delivery skill
+.cursor/
+  rules/xq-squad.mdc               # Always-on Cursor rule (Lead contract pointer)
+  agents/                          # Cursor subagents (point to .squad/agents/)
+  skills/<name>/SKILL.md           # Cursor skills (same bodies as .devin/skills/)
+  hooks.json, hooks/xq-squad-*     # Git guard, scope guard, verify reminder
 .squad/
   README.md                        # This file
   squad.json                       # Component catalog and ownership
@@ -26,12 +31,12 @@ AGENTS.md                          # Always-on Lead instructions, managed sectio
 ## How to use
 
 1. Install a pinned release: `install.sh --target . --version v1.1.0` (or `curl -LsSf <release>/install.sh | sh -s -- --target . --version v1.1.0`).
-2. Open Devin chat on this repository and describe the task in plain language — no commands or special syntax needed. The installed `AGENTS.md` makes Devin the Agent Lead automatically.
+2. Open Devin chat or Cursor Agent on this repository and describe the task in plain language — no commands or special syntax needed. `AGENTS.md` (Devin) or `.cursor/rules/xq-squad.mdc` (Cursor) makes the main agent the Agent Lead automatically.
 3. The Lead reads this README, follows `agents/lead.md`, and invokes the `squad-delivery` skill when useful.
-4. Specialist profiles in `.devin/agents/` are delegated to when Devin supports custom subagents; otherwise the Lead performs each role sequentially.
+4. Specialist profiles in `.devin/agents/` or `.cursor/agents/` are delegated to when the runtime supports custom subagents; otherwise the Lead performs each role sequentially.
 5. Every delivery reports what changed, which checks ran, review findings, and memory status (`UPDATED`, `UNCHANGED`, or `BLOCKED`).
 6. The Lead never commits, pushes, or opens a PR unless explicitly asked in the session.
-7. Upgrade with `update.sh --target . --version vX.Y.Z`. Managed files update safely; `.squad/MEMORY.md`, `.squad/knowledge/`, `.squad/memory/`, and `.devin/*/local-*` are never touched.
+7. Upgrade with `update.sh --target . --version vX.Y.Z`. Managed files update safely; `.squad/MEMORY.md`, `.squad/knowledge/`, `.squad/memory/`, `.devin/*/local-*`, and `.cursor/*/local-*` are never touched. Conflicting managed edits are kept and reported, with upstream written to `<file>.squad-upstream`.
 
 ## Separate concurrent sessions
 
@@ -131,7 +136,8 @@ repos. Pass `--ref` to pin a branch, tag, or sha.
 
 - Add consumer-owned knowledge under `.squad/knowledge/`.
 - Add lessons and events under `.squad/memory/` as NDJSON.
-- Add local rules under `.devin/rules/local-*.md`.
+- Add local rules under `.devin/rules/local-*.md` or `.cursor/rules/local-*.mdc`.
+- Add your own Cursor hooks to `.cursor/hooks.json`; upgrades only replace entries whose command is under `.cursor/hooks/xq-squad-*`.
 - Do not edit managed files between markers unless you intend to override upgrades.
 
 ## Managed section in `AGENTS.md`
