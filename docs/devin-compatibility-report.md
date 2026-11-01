@@ -1,5 +1,7 @@
 # Devin Compatibility Report
 
+> Cursor runtime: see [`cursor-compatibility-report.md`](cursor-compatibility-report.md). The Devin adapter is unchanged in v1.4.0.
+
 ## Concurrent delivery: manual gate PASSED (2026-10-25)
 
 Two real Devin CLI sessions (v3000.11.205, interactive REPL, normal permission

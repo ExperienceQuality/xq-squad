@@ -73,6 +73,7 @@ jobs:
           bash tests/install-minimal.test.sh
           bash tests/upgrade.test.sh
           bash tests/e2e.test.sh
+          bash tests/install-cursor.test.sh
 
       - name: Package release
         if: steps.guard.outputs.skipped != 'true'

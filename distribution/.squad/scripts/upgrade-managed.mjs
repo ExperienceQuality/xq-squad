@@ -47,39 +47,10 @@ function atomicWrite(filePath, content) {
   return writeFile(tmp, content, 'utf8').then(() => rename(tmp, filePath));
 }
 
-function lines(text) {
-  return text.split(/\r?\n/);
-}
-
-function threeWayMerge(baseLines, currentLines, newLines, fileName) {
-  const conflicts = [];
-  const max = Math.max(baseLines.length, currentLines.length, newLines.length);
-  const result = [];
-
-  for (let i = 0; i < max; i++) {
-    const base = baseLines[i];
-    const cur = currentLines[i];
-    const neu = newLines[i];
-
-    if (cur === neu) {
-      result.push(cur ?? '');
-      continue;
-    }
-    if (base === cur) {
-      result.push(neu ?? '');
-      continue;
-    }
-    if (base === neu) {
-      result.push(cur ?? '');
-      continue;
-    }
-    // All three differ: conflict
-    conflicts.push({ file: fileName, line: i + 1 });
-    result.push(cur ?? '');
-  }
-
-  return { text: result.join('\n'), conflicts };
-}
+// Merge-managed files have dedicated merge logic and are skipped by the
+// generic hash-based upgrade.
+const MERGE_MANAGED = new Set(['AGENTS.md', '.cursor/hooks.json']);
+const UPSTREAM_SUFFIX = '.squad-upstream';
 
 export async function upgradeManaged(targetDir, newDir, version) {
   const statePath = join(targetDir, '.squad', 'install-state.json');
@@ -88,7 +59,8 @@ export async function upgradeManaged(targetDir, newDir, version) {
   const applied = [];
 
   const newFiles = await listFiles(newDir);
-  const managedFiles = Object.keys(state.managed_files).filter(p => p !== 'AGENTS.md');
+  const managedFiles = Object.keys(state.managed_files).filter(p => !MERGE_MANAGED.has(p));
+  const appliedSet = new Set();
   const managedSet = new Set(managedFiles);
 
   for (const rel of managedFiles) {
@@ -98,7 +70,6 @@ export async function upgradeManaged(targetDir, newDir, version) {
 
     const current = await readTextOrNull(consumerPath);
     const upstream = await readTextOrNull(newPath);
-    const old = current; // We treat current install baseline as old for now; in v2 store original.
 
     if (!upstream) {
       // File removed in new release. Leave consumer-owned modifications; report if changed.
@@ -113,6 +84,7 @@ export async function upgradeManaged(targetDir, newDir, version) {
       await mkdir(dirname(consumerPath), { recursive: true });
       await copyFile(newPath, consumerPath);
       applied.push(rel);
+      appliedSet.add(rel);
       continue;
     }
 
@@ -121,6 +93,7 @@ export async function upgradeManaged(targetDir, newDir, version) {
       await mkdir(dirname(consumerPath), { recursive: true });
       await copyFile(newPath, consumerPath);
       applied.push(rel);
+      appliedSet.add(rel);
       continue;
     }
 
@@ -129,16 +102,11 @@ export async function upgradeManaged(targetDir, newDir, version) {
       continue;
     }
 
-    // Both changed. Try line merge for text files.
-    const isText = rel.endsWith('.md') || rel.endsWith('.json') || rel.endsWith('.ndjson') || rel.endsWith('.sh') || rel.endsWith('.mjs');
-    if (isText) {
-      const merged = threeWayMerge(lines(old), lines(current), lines(upstream), rel);
-      conflicts.push(...merged.conflicts);
-      await atomicWrite(consumerPath, merged.text);
-      applied.push(rel);
-    } else {
-      conflicts.push({ file: rel, reason: 'binary file conflict' });
-    }
+    // Both changed. Keep the consumer file untouched, write the upstream
+    // version next to it, and report the conflict. The recorded baseline hash
+    // is kept, so the next upgrade still sees the consumer edit.
+    await copyFile(newPath, consumerPath + UPSTREAM_SUFFIX);
+    conflicts.push({ file: rel, reason: `modified locally and upstream; upstream version written to ${rel}${UPSTREAM_SUFFIX}` });
   }
 
   // Files first shipped in this release are absent from the recorded
@@ -147,7 +115,7 @@ export async function upgradeManaged(targetDir, newDir, version) {
   const adopted = [];
   for (const abs of newFiles) {
     const rel = relative(newDir, abs).split(sep).join('/');
-    if (rel === 'AGENTS.md' || managedSet.has(rel)) continue;
+    if (MERGE_MANAGED.has(rel) || managedSet.has(rel)) continue;
     const consumerPath = join(targetDir, rel);
     if (!(await exists(consumerPath))) {
       await mkdir(dirname(consumerPath), { recursive: true });
@@ -159,7 +127,8 @@ export async function upgradeManaged(targetDir, newDir, version) {
     if ((await hashFile(consumerPath)) === (await hashFile(abs))) {
       adopted.push(rel); // identical bytes already present; register as managed
     } else {
-      conflicts.push({ file: rel, reason: 'consumer file exists at new managed path' });
+      await copyFile(abs, consumerPath + UPSTREAM_SUFFIX);
+      conflicts.push({ file: rel, reason: `consumer file exists at new managed path; upstream version written to ${rel}${UPSTREAM_SUFFIX}` });
     }
   }
 
@@ -168,13 +137,23 @@ export async function upgradeManaged(targetDir, newDir, version) {
   if (agentsResult.conflicts.length) conflicts.push(...agentsResult.conflicts);
   if (agentsResult.applied) applied.push('AGENTS.md');
 
+  const hooksResult = await mergeHooks(targetDir, newDir);
+  conflicts.push(...hooksResult.conflicts);
+  if (hooksResult.applied) applied.push('.cursor/hooks.json');
+
   // Update state
   const updatedManaged = {};
   for (const rel of Object.keys(state.managed_files)) {
     const consumerPath = join(targetDir, rel);
-    if (await exists(consumerPath)) {
-      updatedManaged[rel] = await hashFile(consumerPath);
-    }
+    if (!(await exists(consumerPath))) continue;
+    // Only files actually written by this upgrade (and merge-managed files)
+    // get a new baseline; kept consumer edits retain the old one.
+    updatedManaged[rel] = appliedSet.has(rel) || MERGE_MANAGED.has(rel)
+      ? await hashFile(consumerPath)
+      : state.managed_files[rel];
+  }
+  if (hooksResult.applied) {
+    updatedManaged['.cursor/hooks.json'] = await hashFile(join(targetDir, '.cursor', 'hooks.json'));
   }
   for (const rel of adopted) {
     updatedManaged[rel] = await hashFile(join(targetDir, rel));
@@ -198,6 +177,19 @@ async function mergeAgents(targetDir, newDir, state, version) {
   const newPath = join(newDir, 'AGENTS.md');
   const { mergeAgents: mergeAgentsMd } = await import('./merge-agents.mjs');
   await mergeAgentsMd(existingPath, newPath, existingPath);
+  return { applied: true, conflicts: [] };
+}
+
+async function mergeHooks(targetDir, newDir) {
+  const newPath = join(newDir, '.cursor', 'hooks.json');
+  if (!(await exists(newPath))) return { applied: false, conflicts: [] };
+  const existingPath = join(targetDir, '.cursor', 'hooks.json');
+  await mkdir(dirname(existingPath), { recursive: true });
+  const { mergeCursorHooks } = await import('./merge-cursor-hooks.mjs');
+  const res = await mergeCursorHooks(existingPath, newPath, existingPath);
+  if (res.status === 'conflict') {
+    return { applied: false, conflicts: [{ file: '.cursor/hooks.json', reason: `${res.reason}; upstream version written to .cursor/hooks.json${UPSTREAM_SUFFIX}` }] };
+  }
   return { applied: true, conflicts: [] };
 }
 

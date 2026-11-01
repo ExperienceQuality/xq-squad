@@ -68,12 +68,12 @@ sha256_file() {
 [ -d "$TARGET/.git" ] || error "target is not a git repository: $TARGET"
 
 # Preflight: git state. Untracked files and uncommitted changes outside the
-# squad-managed paths (AGENTS.md, .devin/, .squad/) are the consumer's own —
+# squad-managed paths (AGENTS.md, .devin/, .squad/, .cursor/) are the consumer's own —
 # they trigger a note only. Dirty paths that overlap squad files require
 # confirmation (or --yes non-interactively).
 DIRTY_PATHS="$(git -C "$TARGET" status --porcelain --untracked-files=no 2>/dev/null | sed -e 's/^...//' -e 's/.* -> //' -e 's/^"//' -e 's/"$//' || true)"
 if [ -n "$DIRTY_PATHS" ]; then
-  OVERLAP="$(printf '%s\n' "$DIRTY_PATHS" | grep -E '^(AGENTS\.md|\.devin/|\.squad/)' || true)"
+  OVERLAP="$(printf '%s\n' "$DIRTY_PATHS" | grep -E '^(AGENTS\.md|\.devin/|\.squad/|\.cursor/)' || true)"
   if [ -z "$OVERLAP" ]; then
     echo "Note: uncommitted changes exist outside squad-managed paths; proceeding."
   else
@@ -158,6 +158,7 @@ MERGE_AGENTS="$EXTRACT_DIR/.squad/scripts/merge-agents.mjs"
 WRITE_STATE="$EXTRACT_DIR/.squad/scripts/write-install-state.mjs"
 [ -f "$MERGE_AGENTS" ] || error "archive missing .squad/scripts/merge-agents.mjs"
 [ -f "$WRITE_STATE" ] || error "archive missing .squad/scripts/write-install-state.mjs"
+MERGE_HOOKS="$EXTRACT_DIR/.squad/scripts/merge-cursor-hooks.mjs"
 
 # POSIX fallback for merge-agents.mjs, used when Node.js is unavailable.
 # Strips any existing managed block (between the marker lines, inclusive) from
@@ -200,10 +201,15 @@ write_install_state_posix() {
     find "$3" -type f | LC_ALL=C sort | while IFS= read -r _f; do
       _rel="${_f#$3/}"
       case "$_rel" in
-        AGENTS.md|.devin/*|.squad/*) ;;
+        AGENTS.md|.devin/*|.squad/*|.cursor/*) ;;
         *) continue ;;
       esac
       _hash="$(sha256_file "$_f")"
+      if [ "$_rel" = ".cursor/hooks.json" ] && [ -f "$1/$_rel" ]; then
+        _hash="$(sha256_file "$1/$_rel")"
+      elif [ "$_rel" != "AGENTS.md" ] && [ -f "$1/$_rel" ] && [ "$(sha256_file "$1/$_rel")" != "$_hash" ]; then
+        continue
+      fi
       if [ "$_first" -eq 0 ]; then printf ',\n'; fi
       _first=0
       printf '    "%s": "%s"' "$_rel" "$_hash"
@@ -216,8 +222,32 @@ write_install_state_posix() {
   } > "$1/.squad/install-state.json"
 }
 
+# Copy an adapter directory file by file. Existing consumer files that differ
+# are kept; the distributed version is written next to them as
+# <file>.squad-upstream and they stay consumer-owned (not recorded as managed).
+# .cursor/hooks.json is merge-managed: squad entries are merged into it.
+KEPT_FILES=""
+copy_adapter_dir() {
+  _item="$1"
+  for _f in $(cd "$EXTRACT_DIR" && find "$_item" -type f | LC_ALL=C sort); do
+    _dst="$TARGET/$_f"
+    mkdir -p "$(dirname "$_dst")"
+    if [ ! -e "$_dst" ]; then
+      cp "$EXTRACT_DIR/$_f" "$_dst"
+    elif [ "$_f" = ".cursor/hooks.json" ]; then
+      if ! command -v node >/dev/null 2>&1 || ! node "$MERGE_HOOKS" "$_dst" "$EXTRACT_DIR/$_f" "$_dst"; then
+        [ -e "$_dst.squad-upstream" ] || cp "$EXTRACT_DIR/$_f" "$_dst.squad-upstream"
+        KEPT_FILES="$KEPT_FILES $_f"
+      fi
+    elif [ "$(sha256_file "$_dst")" != "$(sha256_file "$EXTRACT_DIR/$_f")" ]; then
+      cp "$EXTRACT_DIR/$_f" "$_dst.squad-upstream"
+      KEPT_FILES="$KEPT_FILES $_f"
+    fi
+  done
+}
+
 # Copy distribution files to target
-for item in AGENTS.md .devin .squad; do
+for item in AGENTS.md .devin .cursor .squad; do
   src="$EXTRACT_DIR/$item"
   [ -e "$src" ] || continue
   if [ "$item" = "AGENTS.md" ]; then
@@ -231,9 +261,10 @@ for item in AGENTS.md .devin .squad; do
     else
       cp "$src" "$TARGET/AGENTS.md"
     fi
-  else
-    # Copy directories recursively, preserving consumer-owned files later handled by update logic
+  elif [ "$item" = ".squad" ]; then
     cp -R "$src" "$TARGET/"
+  else
+    copy_adapter_dir "$item"
   fi
 done
 
@@ -245,3 +276,7 @@ else
 fi
 
 echo "XQ Squad $VERSION installed into $TARGET"
+if [ -n "$KEPT_FILES" ]; then
+  echo "Kept existing consumer files (upstream version written to <file>.squad-upstream):"
+  for _f in $KEPT_FILES; do echo "  $_f"; done
+fi

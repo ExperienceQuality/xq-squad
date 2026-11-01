@@ -11,13 +11,26 @@
     "memory_schema_version": { "type": "string" },
     "repository": { "type": "string", "format": "uri" },
     "description": { "type": "string" },
+    "runtimes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["adapter_root"],
+        "properties": {
+          "adapter_root": { "type": "string" },
+          "description": { "type": "string" }
+        }
+      }
+    },
     "components": {
       "type": "object",
       "properties": {
         "agents": { "type": "object", "additionalProperties": { "$ref": "#/definitions/component" } },
         "skills": { "type": "object", "additionalProperties": { "$ref": "#/definitions/component" } },
         "workflows": { "type": "object", "additionalProperties": { "$ref": "#/definitions/component" } },
-        "schemas": { "type": "object", "additionalProperties": { "$ref": "#/definitions/component" } }
+        "schemas": { "type": "object", "additionalProperties": { "$ref": "#/definitions/component" } },
+        "rules": { "type": "object", "additionalProperties": { "$ref": "#/definitions/component" } },
+        "hooks": { "type": "object", "additionalProperties": { "$ref": "#/definitions/component" } }
       },
       "additionalProperties": false
     },
@@ -38,6 +51,8 @@
       "properties": {
         "path": { "type": "string" },
         "devin_profile": { "type": "string" },
+        "cursor_profile": { "type": "string" },
+        "cursor_path": { "type": "string" },
         "description": { "type": "string" },
         "managed": { "type": "boolean" }
       }

@@ -1,11 +1,12 @@
 # XQ Squad
 
-Repository-native Devin subagent squad. Install into any GitHub repository and operate through Devin chat.
+Repository-native agent squad for **Devin and Cursor**. Install into any GitHub repository and operate through Devin chat or the Cursor Agent. `.squad/` is the canonical, runtime-independent framework; `.devin/` and `.cursor/` are thin runtime adapters over it (see [`docs/architecture.md`](docs/architecture.md)).
 
 ## What it is
 
-- One Agent Lead in the main Devin session.
-- Specialist subagent profiles: analyst, implementer, tester, reviewer, memory-maintainer.
+- One Agent Lead in the main agent session (Devin session or Cursor Agent).
+- Specialist subagents for both runtimes: analyst, implementer, tester, reviewer, memory-maintainer (`.devin/agents/`, `.cursor/agents/`).
+- Cursor rules, skills, and governance hooks (`.cursor/rules/`, `.cursor/skills/`, `.cursor/hooks.json`) — see [`docs/cursor-integration.md`](docs/cursor-integration.md).
 - Delivery skill and workflows.
 - Durable shared memory in the repository: Markdown knowledge, NDJSON records, JSON schemas.
 - Versioned GitHub Releases with installer, archive, and checksum.
@@ -54,8 +55,9 @@ stateDiagram-v2
 xq-squad/
 ├── distribution/          # Consumer-ready files
 │   ├── AGENTS.md
-│   ├── .devin/
-│   └── .squad/
+│   ├── .devin/          # Devin adapter
+│   ├── .cursor/         # Cursor adapter
+│   └── .squad/          # Canonical framework
 ├── install.sh           # Consumer installer
 ├── update.sh            # Consumer upgrader
 ├── scripts/             # Source tooling and validators
@@ -70,7 +72,7 @@ xq-squad/
 Pipe the installer straight into `sh` (POSIX-compatible, no download needed):
 
 ```bash
-curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v1.3.0/install.sh | sh -s -- --target . --version v1.3.0
+curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v1.4.0/install.sh | sh -s -- --target . --version v1.4.0
 ```
 
 The installer is self-contained: helper scripts ship inside the release archive.
@@ -78,20 +80,20 @@ If the target repo has uncommitted changes and stdin is not a TTY (e.g. piped or
 CI), the installer refuses to continue — pass `--yes` to proceed non-interactively:
 
 ```bash
-curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v1.3.0/install.sh | sh -s -- --target . --version v1.3.0 --yes
+curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v1.4.0/install.sh | sh -s -- --target . --version v1.4.0 --yes
 ```
 
 Or download and run it yourself:
 
 ```bash
-curl -fL https://github.com/ExperienceQuality/xq-squad/releases/download/v1.3.0/install.sh -o /tmp/squad-install.sh
-sh /tmp/squad-install.sh --target . --version v1.3.0
+curl -fL https://github.com/ExperienceQuality/xq-squad/releases/download/v1.4.0/install.sh -o /tmp/squad-install.sh
+sh /tmp/squad-install.sh --target . --version v1.4.0
 ```
 
 Or use a local archive:
 
 ```bash
-bash install.sh --target . --version v1.3.0 --archive squad-v1.3.0.tar.gz --checksum squad-v1.3.0.tar.gz.sha256
+bash install.sh --target . --version v1.4.0 --archive squad-v1.4.0.tar.gz --checksum squad-v1.4.0.tar.gz.sha256
 ```
 
 ## Using the squad
@@ -124,6 +126,15 @@ What happens on each request:
 5. **Delivery** — you get a report of what changed, which checks ran, review
    findings, and memory status.
 
+**Cursor:** open the repository in Cursor and use Agent chat the same way. The
+always-on rule `.cursor/rules/xq-squad.mdc` makes the Cursor Agent the Lead;
+specialists run as Cursor subagents from `.cursor/agents/`, and the
+`squad-delivery` skill is in `.cursor/skills/`. Project hooks ask before every
+`git commit`/`git push`/`gh pr create`/`gh release create`, block writes
+outside a concurrent delivery's claimed scope, and send one verification
+reminder before a dirty delivery worktree finishes. Details:
+[`docs/cursor-integration.md`](docs/cursor-integration.md).
+
 **Delegation fallback:** if Devin custom subagents are enabled, specialists
 run as delegated subagents using the `.devin/agents/` profiles. If they are
 unavailable, the Lead performs each role sequentially — same workflow, same
@@ -140,7 +151,7 @@ explicitly ask it to in the session.
 
 ### Concurrent deliveries (unreleased)
 
-An opt-in protocol lets **separate Devin sessions** deliver independent squad
+An opt-in protocol lets **separate agent sessions** (Devin, Cursor, or mixed) deliver independent squad
 projects in the same consumer repository without colliding — see
 [`distribution/.squad/workflows/concurrent-delivery.md`](distribution/.squad/workflows/concurrent-delivery.md)
 for the operating procedure.
@@ -174,13 +185,13 @@ Pull a newer release into a consumer repo (`install.sh` refuses to run over an
 existing installation — always use `update.sh` for upgrades):
 
 ```bash
-curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v1.3.0/update.sh | sh -s -- --target . --version v1.3.0
+curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v1.4.0/update.sh | sh -s -- --target . --version v1.4.0
 ```
 
 Or, from a clone of this repo:
 
 ```bash
-bash update.sh --target /path/to/consumer-repo --version v1.3.0
+bash update.sh --target /path/to/consumer-repo --version v1.4.0
 ```
 
 `update.sh` requires Node.js ≥ 20 (it runs the three-way merge helper shipped
@@ -189,8 +200,30 @@ inside the release archive).
 Upgrades only touch squad-managed files (see the `ownership` section of
 `.squad/squad.json`). Consumer edits to managed files are detected and
 preserved; consumer-owned paths (`.squad/MEMORY.md`, `.squad/knowledge/`,
-`.squad/memory/`, `.devin/rules/local-*`, `.devin/agents/local-*`) are never
-touched.
+`.squad/memory/`, `.devin/rules/local-*`, `.devin/agents/local-*`,
+`.cursor/{agents,rules,skills,hooks}/local-*`) are never touched.
+
+If a consumer edited a managed file that upstream also changed, the update
+keeps the consumer file, writes the new upstream version next to it as
+`<file>.squad-upstream`, reports the conflict, and exits non-zero. Merge the
+two by hand and delete the sidecar; the next update re-checks it.
+`.cursor/hooks.json` is merged: XQ Squad entries (commands under
+`.cursor/hooks/xq-squad-*`) are replaced, consumer hooks are kept.
+
+### Upgrading from a Devin-only release (1.3.x and earlier)
+
+`update.sh --version v1.4.0` adds the Cursor adapter. Existing Cursor files are
+never overwritten: a differing file at a squad path is kept and reported, and
+an existing `.cursor/hooks.json` is merged. Devin files keep working unchanged.
+
+### Rollback
+
+Squad files are committed in your repository, so the simplest rollback is
+`git revert`/`git checkout` of the upgrade commit. Without one: delete the
+`.cursor/` files listed under `managed_files` in `.squad/install-state.json`
+(keep your own), remove the `xq-squad-*` entries from `.cursor/hooks.json`,
+then reinstall the previous version into a clean checkout of `.squad/` and
+`.devin/`.
 
 ## Development
 
@@ -203,7 +236,7 @@ bash scripts/validate.sh
 Package a release:
 
 ```bash
-bash scripts/package-release.sh --version v1.3.0
+bash scripts/package-release.sh --version v1.4.0
 ```
 
 Run tests:
@@ -227,6 +260,6 @@ bash tests/e2e.test.sh
    suite, tags the commit, and publishes `install.sh`, the archive, and the
    checksum as release assets automatically.
 5. Or trigger manually via `workflow_dispatch` with an optional `version`
-   input (e.g. `v1.3.0`).
+   input (e.g. `v1.4.0`).
 
 If the tag or release already exists, the workflow skips publishing.

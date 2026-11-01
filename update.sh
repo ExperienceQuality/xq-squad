@@ -73,11 +73,11 @@ if [ "$CURRENT_VERSION" = "${VERSION#v}" ]; then
 fi
 
 # Preflight: git state. Untracked files and uncommitted changes outside the
-# squad-managed paths (AGENTS.md, .devin/, .squad/) trigger a note only. Dirty
+# squad-managed paths (AGENTS.md, .devin/, .squad/, .cursor/) trigger a note only. Dirty
 # paths that overlap squad files require confirmation (or --yes).
 DIRTY_PATHS="$(git -C "$TARGET" status --porcelain --untracked-files=no 2>/dev/null | sed -e 's/^...//' -e 's/.* -> //' -e 's/^"//' -e 's/"$//' || true)"
 if [ -n "$DIRTY_PATHS" ]; then
-  OVERLAP="$(printf '%s\n' "$DIRTY_PATHS" | grep -E '^(AGENTS\.md|\.devin/|\.squad/)' || true)"
+  OVERLAP="$(printf '%s\n' "$DIRTY_PATHS" | grep -E '^(AGENTS\.md|\.devin/|\.squad/|\.cursor/)' || true)"
   if [ -z "$OVERLAP" ]; then
     echo "Note: uncommitted changes exist outside squad-managed paths; proceeding."
   else

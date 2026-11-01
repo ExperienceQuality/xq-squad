@@ -24,6 +24,9 @@ done
 [[ -f "$DIST_DIR/.devin/skills/squad-delivery/SKILL.md" ]] || error "delivery skill missing"
 [[ -f "$DIST_DIR/.squad/agents/lead.md" ]] || error "Lead contract missing"
 
+# Runtime adapters (Cursor + Devin) against documented formats and canonical contracts
+node "${REPO_ROOT}/scripts/validate-cursor-adapter.mjs" "$DIST_DIR" || error "runtime adapter validation failed"
+
 # AGENTS.md size check (16 KiB limit for Devin auto-injection)
 if [[ -f "$DIST_DIR/AGENTS.md" ]]; then
   size=$(wc -c < "$DIST_DIR/AGENTS.md")
