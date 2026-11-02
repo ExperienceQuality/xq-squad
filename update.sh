@@ -8,11 +8,13 @@ VERSION=""
 TARGET=""
 REPO="ExperienceQuality/xq-squad"
 ASSUME_YES=false
+RETIRED_FLAG=""
+ALLOW_DOWNGRADE=false
 LOCAL_ARCHIVE=""
 LOCAL_CHECKSUM=""
 
 usage() {
-  echo "Usage: update.sh --target PATH --version vX.Y.Z [--repo OWNER/REPO] [--archive PATH] [--checksum PATH] [--yes]"
+  echo "Usage: update.sh --target PATH --version vX.Y.Z [--repo OWNER/REPO] [--archive PATH] [--checksum PATH] [--yes] [--remove-retired|--keep-retired] [--allow-downgrade]"
   exit 2
 }
 
@@ -24,6 +26,10 @@ while [ $# -gt 0 ]; do
     --archive) LOCAL_ARCHIVE="$2"; shift 2 ;;
     --checksum) LOCAL_CHECKSUM="$2"; shift 2 ;;
     --yes) ASSUME_YES=true; shift ;;
+    --remove-retired|--keep-retired)
+      [ -z "$RETIRED_FLAG" ] || [ "$RETIRED_FLAG" = "$1" ] || { echo "Error: --remove-retired and --keep-retired are mutually exclusive" >&2; exit 2; }
+      RETIRED_FLAG="$1"; shift ;;
+    --allow-downgrade) ALLOW_DOWNGRADE=true; shift ;;
     -h|--help) usage ;;
     *) echo "Unknown option: $1" >&2; usage ;;
   esac
@@ -48,10 +54,21 @@ error() {
   exit 1
 }
 
+# Node 22+ runs the upgrade helpers and the Cursor hooks; refuse before
+# touching anything.
+NODE_FOUND="none"
+if command -v node >/dev/null 2>&1; then
+  NODE_FOUND="$(node --version 2>/dev/null || echo unknown)"
+fi
+NODE_MAJOR="$(printf '%s' "$NODE_FOUND" | sed -n 's/^v\([0-9][0-9]*\)\..*/\1/p')"
+if [ -z "$NODE_MAJOR" ] || [ "$NODE_MAJOR" -lt 22 ]; then
+  echo "XQ Squad: Node.js 22 or newer is required (found $NODE_FOUND). Install Node 22+ and rerun update.sh." >&2
+  exit 1
+fi
+
 for cmd in git curl tar; do
   command -v "$cmd" >/dev/null 2>&1 || error "required command not found: $cmd"
 done
-command -v node >/dev/null 2>&1 || error "Node.js >= 20 required for upgrade (runs .squad/scripts/upgrade-managed.mjs). Install Node or report issue."
 
 sha256_file() {
   if command -v shasum >/dev/null 2>&1; then shasum -a 256 "$1" | awk '{print $1}';
@@ -66,14 +83,33 @@ sha256_file() {
 STATE_FILE="$TARGET/.squad/install-state.json"
 [ -f "$STATE_FILE" ] || error "no existing squad installation found; use install.sh"
 
-CURRENT_VERSION="$(node -e "console.log(JSON.parse(require('fs').readFileSync('$STATE_FILE','utf8')).version)")"
-if [ "$CURRENT_VERSION" = "${VERSION#v}" ]; then
+CURRENT_VERSION="$(node -e "console.log(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).version)" "$STATE_FILE")"
+VERSION_ORDER="$(node -e "
+const p = (v) => v.replace(/^v/, '').split('.').map(Number);
+const [a, b] = [p(process.argv[1]), p(process.argv[2])];
+const d = a[0] - b[0] || a[1] - b[1] || a[2] - b[2];
+console.log(d < 0 ? 'older' : d > 0 ? 'newer' : 'same');
+" "$VERSION" "$CURRENT_VERSION")"
+
+if [ "$VERSION_ORDER" = "same" ]; then
+  if [ "$RETIRED_FLAG" = "--remove-retired" ]; then
+    INSTALLED_UPGRADE="$TARGET/.squad/scripts/upgrade-managed.mjs"
+    [ -f "$INSTALLED_UPGRADE" ] || error "installed .squad/scripts/upgrade-managed.mjs not found; reinstall with install.sh"
+    echo "Already at $VERSION; removing unmodified retired files."
+    node "$INSTALLED_UPGRADE" --retired-only "$TARGET" --retired=remove
+    exit 0
+  fi
   echo "Already at $VERSION. No update needed."
   exit 0
 fi
 
+if [ "$VERSION_ORDER" = "older" ] && [ "$ALLOW_DOWNGRADE" != true ]; then
+  error "refusing to downgrade from $CURRENT_VERSION to ${VERSION#v}; pass --allow-downgrade to proceed"
+fi
+
 # Preflight: git state. Untracked files and uncommitted changes outside the
-# squad-managed paths (AGENTS.md, .devin/, .squad/, .cursor/) trigger a note only. Dirty
+# squad-managed paths (AGENTS.md, .squad/, .cursor/, and .devin/ from 1.x
+# installs, which may be removed as retired) trigger a note only. Dirty
 # paths that overlap squad files require confirmation (or --yes).
 DIRTY_PATHS="$(git -C "$TARGET" status --porcelain --untracked-files=no 2>/dev/null | sed -e 's/^...//' -e 's/.* -> //' -e 's/^"//' -e 's/"$//' || true)"
 if [ -n "$DIRTY_PATHS" ]; then
@@ -132,6 +168,29 @@ tar -xzf "$TMP_DIR/$ARCHIVE_NAME" -C "$NEW_DIR"
 # piped updater is self-contained.
 UPGRADE_MANAGED="$NEW_DIR/.squad/scripts/upgrade-managed.mjs"
 [ -f "$UPGRADE_MANAGED" ] || error "archive missing .squad/scripts/upgrade-managed.mjs"
-node "$UPGRADE_MANAGED" "$TARGET" "$NEW_DIR" "$VERSION"
+
+# Retired files (shipped before, no longer shipped). Unmodified ones are
+# removed only with consent: --remove-retired or --yes, or "y" on /dev/tty.
+# Without a terminal and without a flag they are kept.
+RETIRED_POLICY=keep
+if [ "$RETIRED_FLAG" = "--remove-retired" ]; then
+  RETIRED_POLICY=remove
+elif [ "$RETIRED_FLAG" = "--keep-retired" ]; then
+  RETIRED_POLICY=keep
+elif [ "$ASSUME_YES" = true ]; then
+  RETIRED_POLICY=remove
+elif (: </dev/tty) 2>/dev/null; then
+  RETIRED_COUNT="$(node "$UPGRADE_MANAGED" "$TARGET" "$NEW_DIR" "$VERSION" --list-retired | grep -c '"state":"unmodified"' || true)"
+  if [ "${RETIRED_COUNT:-0}" -gt 0 ]; then
+    printf 'Remove %s unmodified retired file(s)? [y/N] ' "$RETIRED_COUNT" >/dev/tty
+    answer=""
+    read -r answer </dev/tty || true
+    case "$answer" in
+      y|Y|yes|YES) RETIRED_POLICY=remove ;;
+    esac
+  fi
+fi
+
+node "$UPGRADE_MANAGED" "$TARGET" "$NEW_DIR" "$VERSION" --retired="$RETIRED_POLICY"
 
 echo "XQ Squad updated to $VERSION in $TARGET"
