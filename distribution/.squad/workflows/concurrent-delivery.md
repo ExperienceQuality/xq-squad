@@ -1,6 +1,6 @@
 # Concurrent Delivery Workflow
 
-Opt-in coordination for separate agent sessions (Devin, Cursor, or mixed) in one local Git repository.
+Opt-in coordination for separate agent sessions in one local Git repository.
 Each session remains its own Lead. There is no shared Lead or background coordinator.
 This workflow requires Node.js >=20 and compatible installed delivery helpers.
 Scripted tests do not establish compatibility with two actual runtime sessions.
