@@ -1,6 +1,6 @@
 # XQ Squad
 
-Install a versioned agent squad into a GitHub repository so Devin or Cursor runs your software tasks through one repeatable, verified delivery process.
+Install a versioned agent squad into a GitHub repository so the Cursor Agent runs your software tasks through one repeatable, verified delivery process.
 
 Current release: **v1.4.0** — see [CHANGELOG.md](CHANGELOG.md) and
 [GitHub Releases](https://github.com/ExperienceQuality/xq-squad/releases).
@@ -9,20 +9,20 @@ Current release: **v1.4.0** — see [CHANGELOG.md](CHANGELOG.md) and
 
 XQ Squad is an installable bundle of Markdown contracts, runtime adapters,
 JSON schemas, and Node.js helper scripts. Installing it into a repository
-makes the main agent session (a Devin session or the Cursor Agent) an
+makes the main agent session (the Cursor Agent) an
 **Agent Lead** that runs an 8-step delivery process and delegates to
 specialist roles.
 
-- For teams that use Devin or Cursor on a repository and want every task
+- For teams that use Cursor on a repository and want every task
   delivered the same way: acceptance criteria, observed checks, review, and a
   memory update.
-- `.squad/` is the canonical, runtime-independent core. `.devin/` and
-  `.cursor/` are thin adapters over it (see
+- `.squad/` is the canonical, runtime-independent core. `.cursor/` is a
+  thin adapter over it (see
   [`docs/architecture.md`](docs/architecture.md)).
 - Project memory lives in the repository itself: `.squad/MEMORY.md` plus NDJSON
   records under `.squad/memory/`, validated by a JSON schema.
 - No hosted service, server, database, GitHub App, or custom runtime. The
-  interface is Devin chat or Cursor Agent chat.
+  interface is Cursor Agent chat.
 - Versioned GitHub Releases ship the installer, the updater, an archive, and
   a SHA-256 checksum.
 
@@ -30,7 +30,7 @@ specialist roles.
 
 ```mermaid
 flowchart TD
-    U[User prompt in Devin chat] --> L[Agent Lead<br/>main session]
+    U[User prompt in Cursor Agent] --> L[Agent Lead<br/>main session]
     A[AGENTS.md<br/>always-on contract] --> L
     L --> SK[squad-delivery skill]
     SK --> WF[delivery workflow<br/>8 stages]
@@ -68,18 +68,17 @@ In Cursor, the always-on rule `.cursor/rules/xq-squad.mdc` plays the role of
 
 ### Roles
 
-| Role | Runs as | Responsibility | Devin profile tools | Cursor subagent |
-| --- | --- | --- | --- | --- |
-| Agent Lead | The main agent session (never a subagent) | Owns the request from intake to delivery; plans, delegates, integrates, reports | — | — |
-| `analyst` | Subagent, or the Lead | Repository discovery and impact analysis | read, grep, glob | `readonly: true` |
-| `implementer` | Subagent, or the Lead | Assigned code changes following repository conventions | read, grep, glob, edit, exec | `readonly: false` |
-| `tester` | Subagent, or the Lead | Runs the relevant checks and tests | read, grep, glob, exec | `readonly: false` |
-| `reviewer` | Subagent, or the Lead | Reviews changes and identifies risks | read, grep, glob, exec | `readonly: true` |
-| `memory-maintainer` | Subagent, or the Lead | Reconciles durable memory; reports `UPDATED`, `UNCHANGED`, or `BLOCKED` | read, grep, glob, exec | `readonly: false` |
+| Role | Runs as | Responsibility | Cursor subagent |
+| --- | --- | --- | --- |
+| Agent Lead | The main agent session (never a subagent) | Owns the request from intake to delivery; plans, delegates, integrates, reports | — |
+| `analyst` | Subagent, or the Lead | Repository discovery and impact analysis | `readonly: true` |
+| `implementer` | Subagent, or the Lead | Assigned code changes following repository conventions | `readonly: false` |
+| `tester` | Subagent, or the Lead | Runs the relevant checks and tests | `readonly: false` |
+| `reviewer` | Subagent, or the Lead | Reviews changes and identifies risks | `readonly: true` |
+| `memory-maintainer` | Subagent, or the Lead | Reconciles durable memory; reports `UPDATED`, `UNCHANGED`, or `BLOCKED` | `readonly: false` |
 
-Role contracts live in `.squad/agents/<role>.md`. The Devin profiles
-(`.devin/agents/<role>.md`) and Cursor subagents (`.cursor/agents/<role>.md`)
-point to them. If custom subagents are unavailable, the Lead performs each
+Role contracts live in `.squad/agents/<role>.md`. The Cursor subagents
+(`.cursor/agents/<role>.md`) point to them. If custom subagents are unavailable, the Lead performs each
 role itself, sequentially.
 
 ### Authority rule
@@ -97,10 +96,10 @@ In Cursor, the `xq-squad-git-guard` hook also asks you to approve each
 
 | Activity | Requirements |
 | --- | --- |
-| Install (`install.sh`) | POSIX `sh`, `git`, `curl`, `tar`, and one SHA-256 tool (`shasum`, `sha256sum`, or `openssl`). The target must be a Git repository without an existing `.squad/` directory. Node.js is optional: POSIX fallbacks handle the `AGENTS.md` merge and install state. Without Node.js, an existing `.cursor/hooks.json` is not merged; it is kept and the release copy is written next to it. |
-| Upgrade (`update.sh`) | Everything install needs, plus Node.js ≥ 20 (runs `.squad/scripts/upgrade-managed.mjs` from the new release). The target must have `.squad/install-state.json`. |
-| Concurrent delivery (opt-in) | Node.js ≥ 20; Git with worktree support (the helpers run `git worktree list --porcelain -z`, which needs Git 2.36 or later); a local filesystem; a base commit that already contains compatible installed `.squad` helpers. |
-| Runtime | A Devin session or the Cursor Agent on the repository. Devin custom subagent profiles are documented for Devin CLI/Desktop. Cursor hooks need Node.js ≥ 20 on `PATH`. Without subagents, the Lead runs each role itself. Node.js runs the `.squad/scripts/*.mjs` helpers (memory search/update, `fetch-openapi-spec`). |
+| Install (`install.sh`) | POSIX `sh`, `git`, `curl`, `tar`, and one SHA-256 tool (`shasum`, `sha256sum`, or `openssl`). The target must be a Git repository without an existing `.squad/` directory. Node.js 22 or newer is optional: without it, POSIX fallbacks handle the `AGENTS.md` merge and install state, but `.cursor/hooks.json` is not written or merged, so the Cursor hooks are **not installed** and their guardrails are unenforced (the installer warns). Install Node 22+ and rerun `update.sh` to add them. |
+| Upgrade (`update.sh`) | Everything install needs, plus Node.js 22 or newer (runs `.squad/scripts/upgrade-managed.mjs` from the new release); `update.sh` refuses to start with an older Node or none. The target must have `.squad/install-state.json`. |
+| Concurrent delivery (opt-in) | Node.js 22 or newer; Git with worktree support (the helpers run `git worktree list --porcelain -z`, which needs Git 2.36 or later); a local filesystem; a base commit that already contains compatible installed `.squad` helpers. |
+| Runtime | The Cursor Agent on the repository. Cursor hooks need Node.js 22 or newer on `PATH`. Without subagents, the Lead runs each role itself. Node.js runs the `.squad/scripts/*.mjs` helpers (memory search/update, `fetch-openapi-spec`). |
 
 ## Install
 
@@ -146,15 +145,16 @@ bash install.sh --target . --version v1.4.0 --archive squad-v1.4.0.tar.gz --chec
 
 About the `--yes` warning: the installer checks tracked files with uncommitted
 changes (untracked files are ignored). Changes outside the squad-managed paths
-only print a note. Changes under **`AGENTS.md`**, **`.devin/`**, **`.squad/`**,
-or **`.cursor/`** print a warning listing those files, then ask for
+only print a note. Changes under **`AGENTS.md`**, **`.squad/`**,
+or **`.cursor/`** (and, for `update.sh`, **`.devin/`** from a 1.x install) print a warning listing those files, then ask for
 confirmation on a TTY, fail without a TTY, or continue with `--yes`.
 
-Existing adapter files are not overwritten. If a file under `.devin/` or
+Existing adapter files are not overwritten. If a file under
 `.cursor/` already exists with different content, the installer keeps it,
 writes the release copy next to it as `<file>.squad-upstream`, leaves it
 consumer-owned, and lists it at the end. An existing `.cursor/hooks.json` is
-merged instead (with Node.js; otherwise it is kept the same way).
+merged instead (with Node.js 22 or newer; otherwise it is left untouched and
+the squad hooks are not installed).
 
 `install.sh` refuses to run over an existing installation (an existing
 `.squad/` directory). Always use `update.sh` to upgrade.
@@ -174,16 +174,26 @@ bash update.sh --target /path/to/consumer-repo --version v1.4.0
 ```
 
 `update.sh` accepts the same flags as `install.sh` except `--dry-run`. It
-exits early if the installed version already matches `--version`, and it
-applies the same uncommitted-change check (and `--yes`) as the installer.
+exits early if the installed version already matches `--version`, refuses to
+move to a lower version, and applies the same uncommitted-change check (and
+`--yes`) as the installer. Extra flags:
+
+| Flag | Description |
+| --- | --- |
+| `--remove-retired` | Delete unmodified retired files (files the new release no longer ships). At the installed version, runs only this cleanup. |
+| `--keep-retired` | Keep unmodified retired files without asking. |
+| `--allow-downgrade` | Allow `--version` lower than the installed version. |
+
+Without `--remove-retired` or `--keep-retired`, `--yes` also deletes unmodified
+retired files; otherwise `update.sh` asks on the terminal, and keeps them when
+there is no terminal.
 
 ### What an upgrade touches
 
 `.squad/squad.json` declares three ownership classes, and
 `.squad/install-state.json` records a SHA-256 baseline for every managed file.
 
-- **Managed files** (`.devin/agents/`, `.devin/skills/`, `.devin/rules/`,
-  `.cursor/agents/`, `.cursor/skills/`, `.cursor/rules/xq-squad*.mdc`,
+- **Managed files** (`.cursor/agents/`, `.cursor/skills/`, `.cursor/rules/xq-squad*.mdc`,
   `.cursor/hooks/xq-squad-*`, `.squad/agents/`, `.squad/workflows/`,
   `.squad/schemas/`, `.squad/scripts/`, `.squad/README.md`):
   - unchanged by you → replaced with the new release's version;
@@ -201,20 +211,34 @@ applies the same uncommitted-change check (and `--yes`) as the installer.
   path, it is kept, the release copy goes to `<file>.squad-upstream`, and the
   conflict is reported.
 - **Consumer-owned files** (`.squad/MEMORY.md`, `.squad/knowledge/`,
-  `.squad/memory/`, and `local-*` files under `.devin/rules/`,
-  `.devin/agents/`, `.cursor/agents/`, `.cursor/rules/`, `.cursor/skills/`,
+  `.squad/memory/`, and `local-*` files under `.cursor/agents/`, `.cursor/rules/`, `.cursor/skills/`,
   and `.cursor/hooks/`) are yours. Releases ship nothing under
   `.squad/knowledge/`, `.squad/memory/`, or the `local-*` paths, so upgrades
   never write there. `.squad/MEMORY.md` is installed once as a starter
   template.
 
+- **Retired files** were shipped by an earlier release and are no longer
+  shipped (listed with a reason in `.squad/retired.json`). They are never a
+  conflict and leave `managed_files`. Unmodified ones are deleted only with
+  consent (`--remove-retired`, `--yes`, or "y" at the prompt); otherwise they
+  are kept and recorded under `retired_files` in `install-state.json`. Files
+  you changed are kept and reported; delete them by hand.
+
 When conflicts are reported, `update.sh` lists them and exits non-zero.
+Each upgrade also refreshes the `ownership` in `install-state.json` from the
+new release's `squad.json`.
 
-### Upgrading from a Devin-only release (1.3.x and earlier)
+### Upgrading from 1.x
 
-`update.sh --version v1.4.0` adds the Cursor adapter. Existing Cursor files are
-never overwritten: a differing file at a squad path is kept and reported, and
-an existing `.cursor/hooks.json` is merged. Devin files keep working unchanged.
+2.0.0 removes the Devin adapter; xq-squad is Cursor-only and needs Node.js 22 or newer.
+Run the normal update command with the 2.0 release. The updater lists the `.devin/` files it no longer ships:
+
+- unmodified files are deleted only if you pass `--yes` or `--remove-retired`, or answer "y";
+- files you changed are kept and reported, and the update still succeeds;
+- your `.devin/rules/local-*` and `.devin/agents/local-*` files are never touched.
+
+If you kept the files, delete them later with `update.sh --target . --remove-retired`.
+If you still use Devin, stay on 1.x.
 
 ### Rollback
 
@@ -222,8 +246,8 @@ Squad files are committed in your repository, so the simplest rollback is
 `git revert`/`git checkout` of the upgrade commit. Without one: delete the
 `.cursor/` files listed under `managed_files` in `.squad/install-state.json`
 (keep your own), remove the `xq-squad-*` entries from `.cursor/hooks.json`,
-then reinstall the previous version into a clean checkout of `.squad/` and
-`.devin/`.
+then reinstall the previous version into a clean checkout of `.squad/`.
+`update.sh --allow-downgrade` also moves to an older release.
 
 ### `AGENTS.md` markers
 
@@ -242,9 +266,10 @@ release version.
 
 ## Usage
 
-After installing, there is nothing to configure — open a Devin session on the
-consumer repository and describe your task in chat. The installed `AGENTS.md`
-makes Devin the **Agent Lead** automatically; no slash commands or special
+After installing, there is nothing to configure — open the consumer
+repository in Cursor and describe your task in Agent chat. The installed
+`AGENTS.md` and `.cursor/rules/xq-squad.mdc` make the Cursor Agent the
+**Agent Lead** automatically; no slash commands or special
 syntax are needed.
 
 **Cursor:** open the repository in Cursor and use Agent chat the same way. The
@@ -287,7 +312,7 @@ Only relevant memory records are loaded per task
 ## Concurrent delivery
 
 Concurrent delivery shipped in 1.1.0 and is **opt-in**. It lets separate agent
-sessions (Devin, Cursor, or mixed) deliver independent work in the same
+sessions deliver independent work in the same
 consumer repository without colliding. Ask the Lead to use
 `.squad/workflows/concurrent-delivery.md`; the operating procedure is in
 [`distribution/.squad/workflows/concurrent-delivery.md`](distribution/.squad/workflows/concurrent-delivery.md).
@@ -314,19 +339,19 @@ consumer repository without colliding. Ask the Lead to use
 - Not isolated: shared ports, databases, external services, and manual edits
   outside claimed paths are outside the protocol's scope.
 
-**Validation status:** verified end-to-end with two real Devin CLI sessions
-(see [`docs/devin-compatibility-report.md`](docs/devin-compatibility-report.md)).
-**Cloud Devin sessions and subagent delegation inside a concurrent delivery
-have not been tested yet.** No real Cursor session has been run yet; the
-Cursor adapter is verified by automated tests only (see
+**Validation status:** before 2.0.0, concurrent delivery was validated
+end-to-end with two real Devin CLI sessions (archived report:
+[`docs/archive/devin-compatibility-report.md`](docs/archive/devin-compatibility-report.md)).
+**It is not yet validated in real Cursor sessions**, and subagent delegation
+inside a concurrent delivery has not been tested; the Cursor adapter is
+verified by automated tests only (see
 [`docs/cursor-compatibility-report.md`](docs/cursor-compatibility-report.md)).
 Claims coordinate cooperating squad sessions only; they cannot police manual
 edits or unrelated tools.
 
 ## Included skills and helpers
 
-Skills install to `.devin/skills/<name>/SKILL.md` and
-`.cursor/skills/<name>/SKILL.md` (same body, runtime-specific frontmatter) and
+Skills install to `.cursor/skills/<name>/SKILL.md` and
 are registered in `.squad/squad.json` under `components.skills`.
 
 ### `squad-delivery`
@@ -362,7 +387,7 @@ node .squad/scripts/fetch-openapi-spec.mjs --list      # list available services
 | --- | --- |
 | `<service>` | Service directory under `openapi/` in the source repo. Cannot be combined with `--all`. |
 | `--all` | Fetch every service that has an `openapi.yaml`. |
-| `--list` | Print available services and exit. |
+| Print available services and exit. |
 | `--out <dir>` | Output root, relative to the Git repository root (default `openapi`). Absolute paths and `..` are rejected. |
 | `--ref <ref>` | Branch, tag, or SHA in the source repo (default: its default branch). |
 | `--repo <owner/repo>` | Source repository. Default `ExperienceQuality/xq-luthor`, or the `XQ_OPENAPI_REPO` environment variable. |
@@ -398,12 +423,6 @@ Files that land in the consumer repository:
 
 ```text
 AGENTS.md                         # Managed section with the Agent Lead contract (merged into an existing file)
-.devin/
-  agents/                         # analyst, implementer, tester, reviewer, memory-maintainer profiles
-  skills/
-    squad-delivery/SKILL.md
-    train-me/SKILL.md
-    fetch-openapi-spec/SKILL.md
 .cursor/
   rules/xq-squad.mdc              # Always-on Lead rule for the Cursor Agent
   agents/                         # Cursor subagents for the same five roles
@@ -413,7 +432,8 @@ AGENTS.md                         # Managed section with the Agent Lead contract
 .squad/
   README.md                       # In-repo guide the Lead reads during discovery
   squad.json                      # Component catalog, runtimes, and ownership classes
-  install-state.json              # Generated: installed version and managed-file hashes
+  retired.json                    # Files no longer shipped, with the reason
+  install-state.json              # Generated: installed version, managed-file hashes, retired_files
   MEMORY.md                       # Consumer-owned memory summary (starter template)
   agents/                         # Lead and specialist role contracts
   workflows/                      # delivery, memory-maintenance, parallel-execution, concurrent-delivery
@@ -432,7 +452,6 @@ upgrade keeps one of your files.
 xq-squad/
 ├── distribution/            # Exactly what ships to consumers (see above)
 │   ├── AGENTS.md
-│   ├── .devin/              # Devin adapter
 │   ├── .cursor/             # Cursor adapter
 │   └── .squad/              # Canonical core
 ├── install.sh               # Consumer installer (POSIX sh)
@@ -449,7 +468,7 @@ xq-squad/
 
 ## Development and testing
 
-Requires Node.js ≥ 20 and, for the concurrent-delivery tests, Git 2.36 or
+Requires Node.js 22 or newer and, for the concurrent-delivery tests, Git 2.36 or
 later. There is no `package.json`; run the scripts directly.
 
 Validate the distribution (also runs `scripts/validate-cursor-adapter.mjs`):
@@ -468,15 +487,13 @@ bash tests/install-minimal.test.sh
 bash tests/upgrade.test.sh
 bash tests/e2e.test.sh
 bash tests/install-cursor.test.sh
-```
-
-Two-process concurrent-delivery protocol fixture. It is **not** part of the
-CI release gate; run it manually when changing the concurrent-delivery
-helpers. It tests protocol behavior only, not real runtime compatibility:
-
-```bash
+bash tests/upgrade-retired.test.sh
 bash tests/concurrent-delivery.test.sh
+bash tests/node-floor.test.sh
 ```
+
+`tests/concurrent-delivery.test.sh` is a two-process protocol fixture: it
+tests protocol behavior only, not real runtime compatibility.
 
 Package a release locally (writes to `.releases/`):
 

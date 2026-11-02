@@ -1,4 +1,4 @@
-# Cursor Compatibility Report (v1.4.0)
+# Cursor Compatibility Report (v2.0.0)
 
 ## Verified (automated, this repository)
 
@@ -10,10 +10,14 @@
 - Hook scripts exercised with sample Cursor stdin payloads
   (`tests/cursor-adapter.test.mjs`): ask/allow, deny/allow, follow-up once.
 - Install/upgrade (`tests/install-cursor.test.sh`): fresh install with
-  pre-existing consumer `.cursor/` files, upgrade from a Devin-only release,
+  pre-existing consumer `.cursor/` files, upgrade from a pre-Cursor release,
   hooks.json merge, conflict sidecars, install-state tracking, repeat
   install/update, reproducible archives.
-- Devin adapter unchanged; existing suites pass.
+- Hook entry points run from paths with spaces, non-ASCII characters, and
+  symlinked parents (`tests/hook-entry.test.mjs`, AF-01 fixed in 2.0.0).
+- Upgrade from a 1.x install with the retired `.devin/` adapter
+  (`tests/upgrade-retired.test.sh`) and the Node 22 floor
+  (`tests/node-floor.test.sh`).
 
 ## Not verified
 

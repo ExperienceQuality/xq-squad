@@ -8,8 +8,8 @@ subagents (https://cursor.com/docs/context/subagents), skills
 | --- | --- |
 | `.cursor/rules/xq-squad.mdc` | `alwaysApply: true`. Makes the main Agent the Lead and points to `.squad/agents/lead.md` and the workflows. Cursor ignores `.md` files in `rules/`, so the extension must be `.mdc`. |
 | `.cursor/agents/<role>.md` | Subagents `analyst`, `reviewer` (`readonly: true`), `implementer`, `tester`, `memory-maintainer`. Each defers to `.squad/agents/<role>.md` and returns a structured result to the Lead. |
-| `.cursor/skills/<name>/SKILL.md` | `squad-delivery`, `train-me`, `fetch-openapi-spec`. Same body as the Devin skill. |
-| `.cursor/hooks.json` | Project hooks (run from the project root, need `node` ≥ 20 on PATH). |
+| `.cursor/skills/<name>/SKILL.md` | `squad-delivery`, `train-me`, `fetch-openapi-spec`. |
+| `.cursor/hooks.json` | Project hooks (run from the project root, need Node.js 22 or newer on PATH; without it `install.sh` does not install them and warns). |
 
 ## Hooks
 
@@ -30,5 +30,5 @@ agents, skills, and hook scripts `local-*`.
 
 Cursor subagents share the parent checkout. Separate deliveries must use
 `.squad/workflows/concurrent-delivery.md` (one approved worktree + claim per
-delivery), exactly as Devin does. Open each delivery's worktree as its own
+delivery), like every squad session. Open each delivery's worktree as its own
 Cursor workspace so the scope guard applies.

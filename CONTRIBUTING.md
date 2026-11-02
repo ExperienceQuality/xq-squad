@@ -13,23 +13,25 @@ This repository is the package source. Consumers receive only `distribution/` fi
 `install.sh` and `update.sh` must stay POSIX (`sh`-compatible, pipeable via `curl | sh`) and dependency-light:
 
 - Hard requirements: `git`, `curl`, `tar`, and exactly one SHA-256 tool (`shasum`, `sha256sum`, or `openssl` — detected at runtime via `sha256_file`).
-- Node.js is optional for install (POSIX fallbacks cover the AGENTS.md merge and install-state generation) but required for upgrade (`upgrade-managed.mjs`).
+- Node.js 22 or newer is optional for install (POSIX fallbacks cover the AGENTS.md merge and install-state generation; without it the Cursor hooks are not installed and the installer warns) but required for upgrade (`upgrade-managed.mjs`); `update.sh` refuses Node <22 before changing anything.
 - Do not add new tool dependencies to the installers without a POSIX fallback.
 
 ## Adding an agent
 
 1. Add portable role contract at `distribution/.squad/agents/<name>.md`.
-2. Add Devin native adapter at `distribution/.devin/agents/<name>.md`.
+2. Add the Cursor subagent at `distribution/.cursor/agents/<name>.md` (it must reference the role contract).
 3. Register the agent in `distribution/.squad/squad.json`.
 4. Update Lead delegation guidance if relevant.
 5. Add tests and run `bash scripts/validate.sh`.
 
-Never add a Lead subagent. The Lead is the main Devin session.
+Never add a Lead subagent. The Lead is the main agent session.
 
 ## Adding a skill or rule
 
-- Skills: `distribution/.devin/skills/<name>/SKILL.md`
-- Rules: `distribution/.devin/rules/<name>.md`
+- Skills: `distribution/.cursor/skills/<name>/SKILL.md`
+- Rules: `distribution/.cursor/rules/<name>.mdc`
+- Removing a shipped file: list it (or its prefix) in `distribution/.squad/retired.json` with `since` and `reason`, so upgrades report it as retired instead of leaving it managed.
+- Cursor is the only supported runtime; `scripts/validate-cursor-adapter.mjs` rejects other runtimes, `devin_profile`, and `.devin/` paths.
 - Keep `AGENTS.md` small; use skills and workflows for detailed procedures.
 
 ## Compatibility
@@ -60,16 +62,20 @@ bash tests/install-pipe.test.sh
 bash tests/install-minimal.test.sh
 bash tests/upgrade.test.sh
 bash tests/e2e.test.sh
+bash tests/install-cursor.test.sh
+bash tests/upgrade-retired.test.sh
+bash tests/concurrent-delivery.test.sh
+bash tests/node-floor.test.sh
 ```
 
-The `release` workflow (`.github/workflows/release.yml`) runs these same
+Run them on Node.js 22 (and 24/26 when available). The `release` workflow (`.github/workflows/release.yml`) runs these same
 checks on every push to `main` before tagging and publishing a release.
 
 Also verify:
 
-- `devin doctor` on an installed fixture.
-- `devin skills list` shows `squad-delivery`.
-- Custom profiles appear in Devin.
+- Install into a sample repository and open it in Cursor: Settings → Rules
+  shows `xq-squad`, and the subagents and skills are listed.
+- Asking the Agent to commit shows the `xq-squad-git-guard` approval prompt.
 
 ## PR template
 
