@@ -29,7 +29,7 @@ cat "$REPO_ROOT/install.sh" | sh -s -- \
 for f in AGENTS.md \
          .squad/squad.json \
          .squad/install-state.json \
-         .devin/skills/squad-delivery/SKILL.md \
+         .cursor/skills/squad-delivery/SKILL.md \
          .squad/scripts/merge-agents.mjs; do
   if [[ ! -e "$CONSUMER/$f" ]]; then
     echo "Missing $f after piped install" >&2

@@ -53,6 +53,26 @@ test('cursor subagents reference canonical contracts and keep governance', async
   }
 });
 
+test('validator is Cursor-only: rejects devin_profile, Devin runtimes, .devin paths and a shipped .devin/', async () => {
+  const d = await tmp();
+  await cp(DIST, d, { recursive: true });
+  const p = path.join(d, '.squad/squad.json');
+  const squad = JSON.parse(readFileSync(p, 'utf8'));
+  squad.components.agents.analyst.devin_profile = '../.devin/agents/analyst.md';
+  squad.components.skills['train-me'].path = '../.devin/skills/train-me/SKILL.md';
+  squad.runtimes.devin = { adapter_root: '../.cursor' };
+  squad.ownership.upstream_managed.push('.devin/agents/**');
+  await writeFile(p, JSON.stringify(squad));
+  await mkdir(path.join(d, '.devin/agents'), { recursive: true });
+  await writeFile(path.join(d, '.devin/agents/analyst.md'), 'x\n');
+  const errors = validateAdapters(d).join('\n');
+  assert.match(errors, /analyst\.devin_profile: Devin keys are not supported/);
+  assert.match(errors, /train-me\.path: \.\.\/\.devin\/skills\/train-me\/SKILL\.md points into \.devin\//);
+  assert.match(errors, /runtimes\.devin: unsupported runtime/);
+  assert.match(errors, /ownership\.upstream_managed: \.devin\/agents/);
+  assert.match(errors, /\.devin\/ must not be shipped/);
+});
+
 test('canonical .squad contracts are runtime-neutral', async () => {
   for (const rel of ['agents/lead.md', 'workflows/delivery.md', 'workflows/parallel-execution.md', 'workflows/concurrent-delivery.md']) {
     const text = await readFile(path.join(DIST, '.squad', rel), 'utf8');
@@ -181,24 +201,24 @@ test('upgrade: consumer and upstream both changed -> consumer kept, sidecar writ
   const { target, next } = await fixture(
     {
       '.cursor/agents/tester.md': ['line1 consumer\nline2\n', 'line1\nline2 upstream\n'],
-      '.devin/agents/tester.md': [base, 'new upstream\n'],
+      '.squad/agents/tester.md': [base, 'new upstream\n'],
       '.squad/README.md': ['consumer only\n', base],
     },
-    { '.cursor/agents/tester.md': sha(base), '.devin/agents/tester.md': sha(base), '.squad/README.md': sha(base) },
+    { '.cursor/agents/tester.md': sha(base), '.squad/agents/tester.md': sha(base), '.squad/README.md': sha(base) },
   );
   const res = await upgradeManaged(target, next, 'v1.1.0');
   assert.deepEqual(res.conflicts.map((c) => c.file), ['.cursor/agents/tester.md']);
   assert.equal(await readFile(path.join(target, '.cursor/agents/tester.md'), 'utf8'), 'line1 consumer\nline2\n');
   assert.equal(await readFile(path.join(target, '.cursor/agents/tester.md.squad-upstream'), 'utf8'), 'line1\nline2 upstream\n');
-  assert.equal(await readFile(path.join(target, '.devin/agents/tester.md'), 'utf8'), 'new upstream\n');
+  assert.equal(await readFile(path.join(target, '.squad/agents/tester.md'), 'utf8'), 'new upstream\n');
   assert.equal(await readFile(path.join(target, '.squad/README.md'), 'utf8'), 'consumer only\n');
   const state = JSON.parse(await readFile(path.join(target, '.squad/install-state.json'), 'utf8'));
   assert.equal(state.managed_files['.cursor/agents/tester.md'], sha(base));
   assert.equal(state.managed_files['.squad/README.md'], sha(base));
-  assert.equal(state.managed_files['.devin/agents/tester.md'], sha('new upstream\n'));
+  assert.equal(state.managed_files['.squad/agents/tester.md'], sha('new upstream\n'));
 });
 
-test('upgrade from a Devin-only install adopts .cursor and merges consumer hooks.json', async () => {
+test('upgrade from a pre-Cursor install adopts .cursor and merges consumer hooks.json', async () => {
   const { target, next } = await fixture(
     {
       '.cursor/agents/tester.md': [null, 'cursor tester\n'],

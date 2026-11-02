@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Dual-runtime install/upgrade: Cursor adapter alongside Devin, consumer-owned
-# Cursor files preserved, Devin-only installs upgraded, deterministic packaging.
+# Cursor adapter install/upgrade: consumer-owned Cursor files preserved,
+# pre-Cursor installs upgraded, deterministic packaging, no .devin/ shipped.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -15,11 +15,12 @@ bash "$REPO_ROOT/scripts/package-release.sh" --version v1.4.0 --output "$REL" >/
 bash "$REPO_ROOT/scripts/package-release.sh" --version v1.4.0 --output "$TMP_BASE/again" >/dev/null
 cmp -s "$REL/squad-v1.4.0.tar.gz.sha256" "$TMP_BASE/again/squad-v1.4.0.tar.gz.sha256" || fail "packaging is not deterministic"
 LISTING="$(tar -tzf "$REL/squad-v1.4.0.tar.gz")"
-for f in .cursor/rules/xq-squad.mdc .cursor/hooks.json .cursor/agents/tester.md .cursor/skills/squad-delivery/SKILL.md .cursor/hooks/xq-squad-git-guard.mjs .devin/agents/tester.md; do
+for f in .cursor/rules/xq-squad.mdc .cursor/hooks.json .cursor/agents/tester.md .cursor/skills/squad-delivery/SKILL.md .cursor/hooks/xq-squad-git-guard.mjs .squad/retired.json; do
   printf '%s\n' "$LISTING" | grep -qx "$f" || fail "archive missing $f"
 done
+printf '%s\n' "$LISTING" | grep -q '^\.devin/' && fail "archive ships .devin/"
 
-# Devin-only v1.3.0: same release with no .cursor/ files.
+# Pre-Cursor v1.3.0: same release with no .cursor/ files.
 OLD="$TMP_BASE/old"; mkdir -p "$OLD"
 tar -xzf "$REL/squad-v1.3.0.tar.gz" -C "$OLD"
 rm -rf "$OLD/.cursor"
@@ -41,19 +42,20 @@ grep -q 'team rule' "$C1/.cursor/rules/team.mdc" || fail "consumer rule changed"
 printf '%s\n' "$OUT" | grep -q '.cursor/agents/tester.md' || fail "kept file not reported"
 state_has "$C1" .cursor/agents/tester.md && fail "kept consumer file recorded as managed"
 state_has "$C1" .cursor/agents/analyst.md || fail ".cursor files not tracked"
-state_has "$C1" .devin/agents/analyst.md || fail ".devin files not tracked"
+[ -e "$C1/.devin" ] && fail ".devin installed"
 node -e "
 const h=JSON.parse(require('fs').readFileSync('$C1/.cursor/hooks.json','utf8')).hooks;
 if(h.afterFileEdit[0].command!=='./fmt.sh') process.exit(1);
 if(!h.beforeShellExecution.some(e=>e.command.includes('xq-squad-git-guard'))) process.exit(1);" || fail "hooks.json not merged"
-[ -f "$C1/.cursor/skills/squad-delivery/SKILL.md" ] && [ -f "$C1/.devin/skills/squad-delivery/SKILL.md" ] || fail "both adapters not installed"
+[ -f "$C1/.cursor/skills/squad-delivery/SKILL.md" ] || fail "Cursor adapter not installed"
+node -e "process.exit(JSON.stringify(JSON.parse(require('fs').readFileSync('$C1/.squad/install-state.json','utf8')).retired_files)==='{}'?0:1)" || fail "retired_files not initialised"
 node "$REPO_ROOT/scripts/validate-cursor-adapter.mjs" "$REPO_ROOT/distribution" || fail "adapter invalid"
 if install_v "$C1" v1.4.0 >/dev/null 2>&1; then fail "repeat install should refuse"; fi
 
-# 2. Upgrade a Devin-only v1.3.0 install with consumer Cursor files.
+# 2. Upgrade a pre-Cursor v1.3.0 install with consumer Cursor files.
 C2="$TMP_BASE/c2"; mkdir -p "$C2"; git -C "$C2" init -q
 install_v "$C2" v1.3.0 >/dev/null
-[ -d "$C2/.cursor" ] && fail "v1.3.0 fixture should be Devin-only"
+[ -d "$C2/.cursor" ] && fail "v1.3.0 fixture should have no .cursor/"
 mkdir -p "$C2/.cursor/rules"
 printf 'mine\n' > "$C2/.cursor/rules/local-mine.mdc"
 printf '{"version":1,"hooks":{"stop":[{"command":"./mine.sh"}]}}\n' > "$C2/.cursor/hooks.json"
