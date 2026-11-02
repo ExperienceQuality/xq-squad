@@ -1,6 +1,8 @@
 # Devin Compatibility Report
 
-> Cursor runtime: see [`cursor-compatibility-report.md`](cursor-compatibility-report.md). The Devin adapter is unchanged in v1.4.0.
+> **Archived (D1).** xq-squad 2.0.0 retired the Devin adapter (decision D1: xq-squad supports Cursor only). This report documents 1.x behavior and is kept for history; Devin users should stay on 1.x.
+
+> Cursor runtime: see [`cursor-compatibility-report.md`](../cursor-compatibility-report.md). The Devin adapter is unchanged in v1.4.0.
 
 ## Concurrent delivery: manual gate PASSED (2026-10-25)
 

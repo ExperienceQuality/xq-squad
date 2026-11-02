@@ -1,5 +1,50 @@
 # Changelog
 
+## [2.0.0] - UNRELEASED
+
+### Removed
+
+- The Devin adapter (decision D1: xq-squad supports Cursor only).
+  `distribution/.devin/` is no longer shipped, `squad.json` has no `devin`
+  runtime or `devin_profile`, and skill paths point to `.cursor/skills/`.
+  The Devin compatibility report is archived at
+  [`docs/archive/devin-compatibility-report.md`](docs/archive/devin-compatibility-report.md).
+
+### Changed
+
+- Retired-file handling: `.squad/retired.json` lists files a release no
+  longer ships. `upgrade-managed.mjs` never reports them as conflicts and
+  drops them from `managed_files`; unmodified ones are deleted only with
+  consent, files you changed are kept and reported, and `local-*` files are
+  never touched. A deprecation notice lists each file.
+- `update.sh` flags: `--remove-retired` (also a cleanup-only pass at the
+  installed version), `--keep-retired`, and `--allow-downgrade`. `--yes` also
+  deletes unmodified retired files; otherwise `update.sh` asks on the terminal
+  and keeps them when there is none.
+- `install-state.json`: `ownership` is refreshed from the new `squad.json` on
+  every upgrade, and kept retired files are recorded under `retired_files`.
+- `squad.json` is Cursor-only and gains `components.manifests.retired`.
+- Node.js 22 or newer: `update.sh` refuses an older Node or none before
+  changing anything; `install.sh` installs without Node 22 but does not write
+  or merge `.cursor/hooks.json` and warns that the guardrails are unenforced.
+  CI runs on Node 22.
+- `update.sh` refuses a downgrade without `--allow-downgrade`.
+- `scripts/validate.sh` fails if `distribution/.devin` exists, validates
+  `retired.json`, and checks relative links in the repository docs.
+
+### Fixed
+
+- AF-01: the three v1.4.0 Cursor hooks (`xq-squad-git-guard`,
+  `xq-squad-scope-guard`, `xq-squad-verify-reminder`) printed nothing when
+  the repository path had spaces, non-ASCII characters, or a symlinked
+  parent, because the entry-point check compared `import.meta.url` with a raw
+  `file://` path. They now compare against the resolved file URL.
+
+### Migration
+
+- See "Upgrading from 1.x" in the README. Teams using Devin stay on 1.x.
+- History docs under `docs/ideas/` and `tasks/` still mention Devin.
+
 ## [1.4.0] - 2026-11-01
 
 ### Added
@@ -94,7 +139,7 @@
   sources (`memory-search.mjs --source`). Requires Node.js ≥ 20 in the
   consumer and a base commit containing compatible installed `.squad` helpers.
   Validated end-to-end with two real Devin CLI sessions; see
-  `docs/devin-compatibility-report.md` and
+  `docs/archive/devin-compatibility-report.md` and
   `distribution/.squad/workflows/concurrent-delivery.md`.
 
 ### Fixed
