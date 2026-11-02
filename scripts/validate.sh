@@ -21,13 +21,15 @@ error() {
 for m in delivery-scope delivery-registry delivery-worktree delivery-session delivery-verify; do
   [[ -f "$DIST_DIR/.squad/scripts/$m.mjs" ]] || error "concurrent-delivery helper missing: .squad/scripts/$m.mjs"
 done
-[[ -f "$DIST_DIR/.devin/skills/squad-delivery/SKILL.md" ]] || error "delivery skill missing"
+[[ -f "$DIST_DIR/.cursor/skills/squad-delivery/SKILL.md" ]] || error "delivery skill missing"
+[[ -e "$DIST_DIR/.devin" ]] && error "distribution/.devin must not exist: the Devin adapter was retired (D1)"
+[[ -f "$DIST_DIR/.squad/retired.json" ]] || error ".squad/retired.json missing"
 [[ -f "$DIST_DIR/.squad/agents/lead.md" ]] || error "Lead contract missing"
 
-# Runtime adapters (Cursor + Devin) against documented formats and canonical contracts
+# Cursor adapter (the only supported runtime) against documented formats and canonical contracts
 node "${REPO_ROOT}/scripts/validate-cursor-adapter.mjs" "$DIST_DIR" || error "runtime adapter validation failed"
 
-# AGENTS.md size check (16 KiB limit for Devin auto-injection)
+# AGENTS.md size check (16 KiB budget for always-loaded agent instructions)
 if [[ -f "$DIST_DIR/AGENTS.md" ]]; then
   size=$(wc -c < "$DIST_DIR/AGENTS.md")
   if [[ "$size" -gt 16384 ]]; then
@@ -89,6 +91,67 @@ NODE
   then
     error "concurrent-delivery helpers fail import/export sanity"
   fi
+fi
+
+# retired.json: every entry names exactly one of path/prefix, a semver
+# "since" and a reason, and nothing it retires is still shipped.
+if [[ -f "$DIST_DIR/.squad/retired.json" ]]; then
+  if ! SQ_DIST="$DIST_DIR" node --input-type=module - <<'NODE'
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import path from 'node:path';
+const dist = process.env.SQ_DIST;
+const m = JSON.parse(readFileSync(path.join(dist, '.squad/retired.json'), 'utf8'));
+const errs = [];
+if (m.version !== 1) errs.push('version must be 1');
+if (!Array.isArray(m.retired)) errs.push('retired must be an array');
+const files = [];
+const walk = (d) => { for (const e of readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); e.isDirectory() ? walk(p) : files.push(path.relative(dist, p).split(path.sep).join('/')); } };
+walk(dist);
+for (const [i, e] of (m.retired || []).entries()) {
+  const at = `retired[${i}]`;
+  if (('path' in e) === ('prefix' in e)) errs.push(`${at}: needs exactly one of path or prefix`);
+  if (!/^\d+\.\d+\.\d+$/.test(e.since || '')) errs.push(`${at}: since must be X.Y.Z`);
+  if (typeof e.reason !== 'string' || !e.reason) errs.push(`${at}: reason required`);
+  if (e.path && existsSync(path.join(dist, e.path))) errs.push(`${at}: ${e.path} is still shipped`);
+  if (e.prefix && files.some((f) => f.startsWith(e.prefix))) errs.push(`${at}: files under ${e.prefix} are still shipped`);
+}
+for (const x of errs) console.error(`retired.json: ${x}`);
+process.exit(errs.length ? 1 : 0);
+NODE
+  then
+    error ".squad/retired.json is invalid"
+  fi
+fi
+
+# Relative links in the repository docs resolve (history docs under
+# docs/ideas/ and tasks/ are excluded).
+if ! SQ_ROOT="$REPO_ROOT" node --input-type=module - <<'NODE'
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import path from 'node:path';
+const root = process.env.SQ_ROOT;
+const docs = ['README.md', 'CHANGELOG.md', 'CONTRIBUTING.md'];
+for (const dir of ['docs', 'docs/archive']) {
+  if (!existsSync(path.join(root, dir))) continue;
+  for (const f of readdirSync(path.join(root, dir))) if (f.endsWith('.md')) docs.push(`${dir}/${f}`);
+}
+let bad = 0;
+for (const rel of docs) {
+  const file = path.join(root, rel);
+  if (!existsSync(file)) continue;
+  const text = readFileSync(file, 'utf8').replace(/^(```|~~~)[\s\S]*?^\1/gm, '').replace(/`[^`\n]*`/g, '');
+  for (const [, target] of text.matchAll(/\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g)) {
+    if (/^([a-z]+:|#|\/)/i.test(target)) continue;
+    const dest = decodeURIComponent(target.split('#')[0]);
+    if (dest && !existsSync(path.resolve(path.dirname(file), dest))) {
+      console.error(`${rel}: broken relative link ${target}`);
+      bad++;
+    }
+  }
+}
+process.exit(bad ? 1 : 0);
+NODE
+then
+  error "repository docs contain broken relative links"
 fi
 
 # README version pins (release-asset URLs, --version flags, archive names)

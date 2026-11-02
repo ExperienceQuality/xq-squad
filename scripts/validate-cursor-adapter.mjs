@@ -1,9 +1,13 @@
-// Validates the Cursor and Devin adapters in a distribution directory against
-// the documented Cursor formats and the canonical .squad contracts.
+// Validates the Cursor adapter (the only supported runtime) in a distribution
+// directory against the documented Cursor formats and the canonical .squad
+// contracts.
 // Usage: node scripts/validate-cursor-adapter.mjs <distribution-dir>
-import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync, statSync, realpathSync } from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
+export const RUNTIMES = new Set(['cursor']);
+const COMPONENT_PATH_KEYS = ['path', 'cursor_profile', 'cursor_path'];
 export const ROLES = ['analyst', 'implementer', 'tester', 'reviewer', 'memory-maintainer'];
 // Hook events from https://cursor.com/docs/agent/hooks
 export const HOOK_EVENTS = new Set([
@@ -46,15 +50,14 @@ export function validateAdapters(dist) {
   for (const role of ROLES) {
     const canonical = `.squad/agents/${role}.md`;
     if (!has(canonical)) err(`${canonical} missing`);
-    for (const [runtime, rel] of [['cursor', `.cursor/agents/${role}.md`], ['devin', `.devin/agents/${role}.md`]]) {
-      if (!has(rel)) { err(`${rel} missing (${runtime} adapter)`); continue; }
-      const fm = parseFrontmatter(read(rel));
-      if (!fm) { err(`${rel}: missing frontmatter`); continue; }
-      if (fm.data.name !== role) err(`${rel}: name must be ${role}`);
-      if (!fm.data.description) err(`${rel}: missing description`);
-      if (!fm.body.includes(canonical)) err(`${rel}: must reference ${canonical}`);
-      if (runtime === 'cursor' && 'readonly' in fm.data && !['true', 'false'].includes(fm.data.readonly)) err(`${rel}: readonly must be boolean`);
-    }
+    const rel = `.cursor/agents/${role}.md`;
+    if (!has(rel)) { err(`${rel} missing (cursor adapter)`); continue; }
+    const fm = parseFrontmatter(read(rel));
+    if (!fm) { err(`${rel}: missing frontmatter`); continue; }
+    if (fm.data.name !== role) err(`${rel}: name must be ${role}`);
+    if (!fm.data.description) err(`${rel}: missing description`);
+    if (!fm.body.includes(canonical)) err(`${rel}: must reference ${canonical}`);
+    if ('readonly' in fm.data && !['true', 'false'].includes(fm.data.readonly)) err(`${rel}: readonly must be boolean`);
   }
 
   for (const dir of ls('.cursor/skills')) {
@@ -65,13 +68,9 @@ export function validateAdapters(dist) {
     if (fm.data.name !== dir) err(`${rel}: name must match folder ${dir}`);
     if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(dir)) err(`${rel}: name must be lowercase-hyphenated`);
     if (!fm.data.description) err(`${rel}: missing description`);
-    const devin = `.devin/skills/${dir}/SKILL.md`;
-    if (!has(devin)) err(`${rel}: no Devin counterpart ${devin}`);
-    else if (parseFrontmatter(read(devin))?.body !== fm.body) err(`${rel}: body differs from ${devin}`);
   }
-  for (const dir of ls('.devin/skills')) {
-    if (!has(`.cursor/skills/${dir}/SKILL.md`)) err(`.devin/skills/${dir} has no Cursor counterpart`);
-  }
+
+  if (has('.devin')) err('.devin/ must not be shipped: the Devin adapter was retired (D1)');
 
   if (!has('.cursor/hooks.json')) err('.cursor/hooks.json missing');
   else {
@@ -96,18 +95,37 @@ export function validateAdapters(dist) {
   const squad = JSON.parse(read('.squad/squad.json'));
   for (const [kind, group] of Object.entries(squad.components || {})) {
     for (const [name, c] of Object.entries(group)) {
-      for (const key of ['path', 'devin_profile', 'cursor_profile', 'cursor_path']) {
-        if (c[key] && !existsSync(path.join(dist, '.squad', c[key]))) err(`squad.json ${kind}.${name}.${key}: ${c[key]} missing`);
+      for (const key of Object.keys(c)) {
+        if (/^devin/.test(key)) err(`squad.json ${kind}.${name}.${key}: Devin keys are not supported (Cursor only)`);
+      }
+      for (const key of COMPONENT_PATH_KEYS) {
+        if (!c[key]) continue;
+        if (/(^|\/)\.devin\//.test(c[key])) err(`squad.json ${kind}.${name}.${key}: ${c[key]} points into .devin/ (Cursor only)`);
+        else if (!existsSync(path.join(dist, '.squad', c[key]))) err(`squad.json ${kind}.${name}.${key}: ${c[key]} missing`);
       }
     }
   }
   for (const [rt, r] of Object.entries(squad.runtimes || {})) {
+    if (!RUNTIMES.has(rt)) { err(`squad.json runtimes.${rt}: unsupported runtime (Cursor only)`); continue; }
     if (!existsSync(path.join(dist, '.squad', r.adapter_root))) err(`squad.json runtimes.${rt}: ${r.adapter_root} missing`);
+  }
+  for (const group of ['upstream_managed', 'merge_managed', 'consumer_owned']) {
+    for (const glob of squad.ownership?.[group] || []) {
+      if (glob.startsWith('.devin/')) err(`squad.json ownership.${group}: ${glob} (Cursor only)`);
+    }
   }
   return errors;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+function isMain() {
+  try {
+    return Boolean(process.argv[1]) && pathToFileURL(realpathSync(process.argv[1])).href === import.meta.url;
+  } catch {
+    return false;
+  }
+}
+
+if (isMain()) {
   const errors = validateAdapters(path.resolve(process.argv[2] || 'distribution'));
   for (const e of errors) console.error(`Error: ${e}`);
   process.exit(errors.length ? 1 : 0);
