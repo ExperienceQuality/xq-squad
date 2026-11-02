@@ -1,6 +1,8 @@
 import { readFile, writeFile, rename, mkdir, copyFile, access } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { join, dirname, relative, sep } from 'node:path';
+import { realpathSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 
 async function hashFile(path) {
   const hash = createHash('sha256');
@@ -51,12 +53,150 @@ function atomicWrite(filePath, content) {
 // generic hash-based upgrade.
 const MERGE_MANAGED = new Set(['AGENTS.md', '.cursor/hooks.json']);
 const UPSTREAM_SUFFIX = '.squad-upstream';
+const RETIRED_POLICIES = new Set(['remove', 'keep']);
 
-export async function upgradeManaged(targetDir, newDir, version) {
+async function readJsonOrNull(path) {
+  const text = await readTextOrNull(path);
+  if (text === null) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+function globToRegExp(glob) {
+  let re = '';
+  for (let i = 0; i < glob.length; i++) {
+    const ch = glob[i];
+    if (ch === '*' && glob[i + 1] === '*') { re += '.*'; i++; }
+    else if (ch === '*') re += '[^/]*';
+    else re += ch.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
+  }
+  return new RegExp(`^${re}$`);
+}
+
+// Retired-file lookup: exact `path` entry first, then the longest `prefix`.
+export function lookupRetired(manifest, rel) {
+  const entries = Array.isArray(manifest?.retired) ? manifest.retired : [];
+  const exact = entries.find((e) => e.path === rel);
+  if (exact) return exact;
+  let best = null;
+  for (const e of entries) {
+    if (typeof e.prefix === 'string' && rel.startsWith(e.prefix) && (!best || e.prefix.length > best.prefix.length)) best = e;
+  }
+  return best;
+}
+
+function retiredReason(entry, versionNumber) {
+  return entry?.reason || `No longer shipped in ${versionNumber}.`;
+}
+
+// Delete now-empty parent directories up to the top-level adapter directory.
+// rmdir fails on a non-empty directory, so consumer files are never removed.
+async function pruneEmptyParents(targetDir, rel) {
+  const { rmdir } = await import('node:fs/promises');
+  let dir = dirname(rel);
+  while (dir && dir !== '.' && dir !== '/') {
+    try {
+      await rmdir(join(targetDir, dir));
+    } catch {
+      return;
+    }
+    dir = dirname(dir);
+  }
+}
+
+async function classifyRetired(targetDir, rel, baselineHash, isConsumerOwned) {
+  if (isConsumerOwned(rel)) return 'consumer-owned';
+  const path = join(targetDir, rel);
+  if (!(await exists(path))) return 'missing';
+  return (await hashFile(path)) === baselineHash ? 'unmodified' : 'modified';
+}
+
+const RETIRED_ACTIONS = {
+  missing: () => 'drop-entry',
+  unmodified: (policy) => (policy === 'remove' ? 'remove' : 'keep'),
+  modified: () => 'drop-entry',
+  'consumer-owned': () => 'skip',
+};
+
+// Applies the retired-file policy to one file. Returns the notice (or null)
+// and the retired_files entry to keep (or null).
+async function settleRetired(targetDir, rel, baselineHash, entry, policy, versionNumber, isConsumerOwned) {
+  const state = await classifyRetired(targetDir, rel, baselineHash, isConsumerOwned);
+  const reason = retiredReason(entry, versionNumber);
+  const since = entry?.since || versionNumber;
+  const base = { file: rel, reason, since, decision: entry?.decision || null, prefix: entry?.prefix || null };
+  if (state === 'consumer-owned') return { state, notice: null, keep: null };
+  if (state === 'missing') return { state, notice: { ...base, kind: 'retired-missing' }, keep: null };
+  if (state === 'modified') return { state, notice: { ...base, kind: 'retired-modified' }, keep: null };
+  if (policy === 'remove') {
+    const { unlink } = await import('node:fs/promises');
+    await unlink(join(targetDir, rel));
+    await pruneEmptyParents(targetDir, rel);
+    return { state, notice: { ...base, kind: 'retired-removed' }, keep: null };
+  }
+  return { state, notice: { ...base, kind: 'retired-kept' }, keep: { hash: baselineHash, since, reason } };
+}
+
+function consumerOwnedMatcher(...ownerships) {
+  const globs = ownerships.flatMap((o) => (Array.isArray(o?.consumer_owned) ? o.consumer_owned : []));
+  const res = globs.map(globToRegExp);
+  return (rel) => res.some((re) => re.test(rel)) || /(^|\/)local-[^/]*$/.test(rel);
+}
+
+// Lists every retired file without changing anything.
+export async function listRetired(targetDir, newDir, version, { retired = 'keep' } = {}) {
+  const state = JSON.parse(await readFile(join(targetDir, '.squad', 'install-state.json'), 'utf8'));
+  const newSquad = await readJsonOrNull(join(newDir, '.squad', 'squad.json'));
+  const isConsumerOwned = consumerOwnedMatcher(state.ownership, newSquad?.ownership);
+  const rows = [];
+  const candidates = [
+    ...Object.entries(state.managed_files || {}).filter(([rel]) => !MERGE_MANAGED.has(rel)),
+    ...Object.entries(state.retired_files || {}).map(([rel, r]) => [rel, r.hash]),
+  ];
+  for (const [rel, hash] of candidates) {
+    if (await exists(join(newDir, rel))) continue;
+    const st = await classifyRetired(targetDir, rel, hash, isConsumerOwned);
+    rows.push({ rel, state: st, action: RETIRED_ACTIONS[st](retired) });
+  }
+  return rows;
+}
+
+// Retired-only pass over install-state.json retired_files (files kept
+// earlier without consent). Needs no new release.
+export async function settleRetiredFiles(targetDir, { retired = 'remove' } = {}) {
   const statePath = join(targetDir, '.squad', 'install-state.json');
   const state = JSON.parse(await readFile(statePath, 'utf8'));
+  const manifest = await readJsonOrNull(join(targetDir, '.squad', 'retired.json'));
+  const isConsumerOwned = consumerOwnedMatcher(state.ownership);
+  const notices = [];
+  const retiredFiles = {};
+  for (const [rel, r] of Object.entries(state.retired_files || {})) {
+    const entry = lookupRetired(manifest, rel) || { since: r.since, reason: r.reason };
+    const res = await settleRetired(targetDir, rel, r.hash, entry, retired, state.version, isConsumerOwned);
+    if (res.notice) notices.push(res.notice);
+    if (res.keep) retiredFiles[rel] = res.keep;
+  }
+  const newState = { ...state, retired_files: retiredFiles, updated_at: new Date().toISOString() };
+  await atomicWrite(statePath, JSON.stringify(newState, null, 2) + '\n');
+  return { applied: [], conflicts: [], notices, ownership: state.ownership };
+}
+
+export async function upgradeManaged(targetDir, newDir, version, { retired = 'keep' } = {}) {
+  if (!RETIRED_POLICIES.has(retired)) throw new Error(`unknown retired policy: ${retired}`);
+  const statePath = join(targetDir, '.squad', 'install-state.json');
+  const state = JSON.parse(await readFile(statePath, 'utf8'));
+  const versionNumber = version.startsWith('v') ? version.slice(1) : version;
+  const newSquad = await readJsonOrNull(join(newDir, '.squad', 'squad.json'));
+  const manifest = await readJsonOrNull(join(newDir, '.squad', 'retired.json'));
+  const isConsumerOwned = consumerOwnedMatcher(state.ownership, newSquad?.ownership);
   const conflicts = [];
   const applied = [];
+  const notices = [];
+  const retiredSet = new Set();
+  const retiredFiles = {};
 
   const newFiles = await listFiles(newDir);
   const managedFiles = Object.keys(state.managed_files).filter(p => !MERGE_MANAGED.has(p));
@@ -68,18 +208,16 @@ export async function upgradeManaged(targetDir, newDir, version) {
     const newPath = join(newDir, rel);
     const oldHash = state.managed_files[rel];
 
-    const current = await readTextOrNull(consumerPath);
-    const upstream = await readTextOrNull(newPath);
-
-    if (!upstream) {
-      // File removed in new release. Leave consumer-owned modifications; report if changed.
-      if (current && await hashFile(consumerPath) !== oldHash) {
-        conflicts.push({ file: rel, reason: 'upstream removed but consumer modified' });
-      }
+    if (!(await exists(newPath))) {
+      // Retired: the new release no longer ships this file. Never a conflict.
+      retiredSet.add(rel);
+      const res = await settleRetired(targetDir, rel, oldHash, lookupRetired(manifest, rel), retired, versionNumber, isConsumerOwned);
+      if (res.notice) notices.push(res.notice);
+      if (res.keep) retiredFiles[rel] = res.keep;
       continue;
     }
 
-    if (!current) {
+    if (!(await exists(consumerPath))) {
       // Missing locally; install fresh.
       await mkdir(dirname(consumerPath), { recursive: true });
       await copyFile(newPath, consumerPath);
@@ -107,6 +245,16 @@ export async function upgradeManaged(targetDir, newDir, version) {
     // is kept, so the next upgrade still sees the consumer edit.
     await copyFile(newPath, consumerPath + UPSTREAM_SUFFIX);
     conflicts.push({ file: rel, reason: `modified locally and upstream; upstream version written to ${rel}${UPSTREAM_SUFFIX}` });
+  }
+
+  // Files kept by an earlier upgrade without consent. A path shipped again
+  // leaves retired_files and is handled by the adoption pass below.
+  for (const [rel, r] of Object.entries(state.retired_files || {})) {
+    if (managedSet.has(rel) || (await exists(join(newDir, rel)))) continue;
+    const entry = lookupRetired(manifest, rel) || { since: r.since, reason: r.reason };
+    const res = await settleRetired(targetDir, rel, r.hash, entry, retired, versionNumber, isConsumerOwned);
+    if (res.notice) notices.push(res.notice);
+    if (res.keep) retiredFiles[rel] = res.keep;
   }
 
   // Files first shipped in this release are absent from the recorded
@@ -144,6 +292,7 @@ export async function upgradeManaged(targetDir, newDir, version) {
   // Update state
   const updatedManaged = {};
   for (const rel of Object.keys(state.managed_files)) {
+    if (retiredSet.has(rel)) continue;
     const consumerPath = join(targetDir, rel);
     if (!(await exists(consumerPath))) continue;
     // Only files actually written by this upgrade (and merge-managed files)
@@ -159,17 +308,18 @@ export async function upgradeManaged(targetDir, newDir, version) {
     updatedManaged[rel] = await hashFile(join(targetDir, rel));
   }
 
-  const versionNumber = version.startsWith('v') ? version.slice(1) : version;
   const newState = {
     ...state,
     version: versionNumber,
     release_tag: version,
     managed_files: updatedManaged,
+    retired_files: retiredFiles,
+    ownership: newSquad?.ownership ?? state.ownership,
     updated_at: new Date().toISOString()
   };
   await atomicWrite(statePath, JSON.stringify(newState, null, 2) + '\n');
 
-  return { applied, conflicts };
+  return { applied, conflicts, notices, ownership: state.ownership };
 }
 
 async function mergeAgents(targetDir, newDir, state, version) {
@@ -193,9 +343,83 @@ async function mergeHooks(targetDir, newDir) {
   return { applied: true, conflicts: [] };
 }
 
+const pad = (s) => s.padEnd(10);
+const lcfirst = (s) => s.charAt(0).toLowerCase() + s.slice(1);
+
+function headline(n) {
+  const m = /^(.*?):\s+(.*?)\.?$/.exec(n.reason || '');
+  if (n.decision && m) return `XQ Squad ${n.since}: ${lcfirst(m[1])} (decision ${n.decision}: ${m[2]}).`;
+  if (n.decision) return `XQ Squad ${n.since}: ${n.reason} (decision ${n.decision}).`;
+  return `XQ Squad ${n.since}: ${n.reason}`;
+}
+
+function noticeLine(n) {
+  if (n.kind === 'retired-removed') return `  ${pad('removed')}${n.file}`;
+  if (n.kind === 'retired-kept') return `  ${pad('kept')}${n.file}   (unmodified; rerun update.sh with --remove-retired to delete)`;
+  if (n.kind === 'retired-modified') {
+    const why = n.decision ? `retired by ${n.decision}` : 'changed locally';
+    return `  ${pad('modified')}${n.file}   (${why}; keep or delete by hand)`;
+  }
+  return `  ${pad('missing')}${n.file}   (already removed)`;
+}
+
+// Human-readable deprecation notice, one block per retired.json entry.
+export function formatRetiredNotice(notices, ownership) {
+  const groups = new Map();
+  for (const n of notices) {
+    const key = `${n.since}\0${n.decision}\0${n.reason}\0${n.prefix}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(n);
+  }
+  const consumerGlobs = Array.isArray(ownership?.consumer_owned) ? ownership.consumer_owned : [];
+  const blocks = [];
+  for (const group of groups.values()) {
+    const first = group[0];
+    const lines = [headline(first), 'These files from your previous install are no longer shipped:', ...group.map(noticeLine)];
+    const own = first.prefix ? consumerGlobs.filter((g) => g.startsWith(first.prefix)) : [];
+    if (own.length) {
+      const list = own.length === 1 ? own[0] : `${own.slice(0, -1).join(', ')} and ${own[own.length - 1]}`;
+      lines.push(`Your own ${list} files were not touched.`);
+    }
+    if (first.decision) lines.push('See "Upgrading from 1.x" in the README.');
+    blocks.push(lines.join('\n'));
+  }
+  return blocks.join('\n\n');
+}
+
+export function parseArgs(argv) {
+  const opts = { retired: 'keep', listRetired: false, retiredOnly: false, positional: [] };
+  for (const arg of argv) {
+    if (arg.startsWith('--retired=')) opts.retired = arg.slice('--retired='.length);
+    else if (arg === '--list-retired') opts.listRetired = true;
+    else if (arg === '--retired-only') opts.retiredOnly = true;
+    else if (arg.startsWith('--')) throw new Error(`unknown option: ${arg}`);
+    else opts.positional.push(arg);
+  }
+  if (!RETIRED_POLICIES.has(opts.retired)) throw new Error(`--retired must be remove or keep, got ${opts.retired}`);
+  return opts;
+}
+
 async function main() {
-  const [targetDir, newDir, version] = process.argv.slice(2);
-  const result = await upgradeManaged(targetDir, newDir, version);
+  let opts;
+  try {
+    opts = parseArgs(process.argv.slice(2));
+  } catch (err) {
+    console.error(`Error: ${err.message}`);
+    console.error('Usage: upgrade-managed.mjs <target> <newDir> <version> [--retired=remove|keep] [--list-retired]');
+    console.error('       upgrade-managed.mjs --retired-only <target> --retired=remove|keep');
+    process.exit(2);
+  }
+  const [targetDir, newDir, version] = opts.positional;
+
+  if (opts.listRetired) {
+    for (const row of await listRetired(targetDir, newDir, version, opts)) console.log(JSON.stringify(row));
+    return;
+  }
+
+  const result = opts.retiredOnly
+    ? await settleRetiredFiles(targetDir, opts)
+    : await upgradeManaged(targetDir, newDir, version, opts);
 
   if (result.conflicts.length) {
     console.error('Conflicts detected:');
@@ -207,9 +431,19 @@ async function main() {
     for (const f of result.applied) console.log(`  ${f}`);
   }
 
+  if (result.notices.length) console.log(formatRetiredNotice(result.notices, result.ownership));
+
   process.exit(result.conflicts.length ? 1 : 0);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+function isMain() {
+  try {
+    return Boolean(process.argv[1]) && pathToFileURL(realpathSync(process.argv[1])).href === import.meta.url;
+  } catch {
+    return false;
+  }
+}
+
+if (isMain()) {
   main();
 }

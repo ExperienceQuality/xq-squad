@@ -1,11 +1,12 @@
 import { writeFile, mkdir } from 'node:fs/promises';
 import { readFile } from 'node:fs/promises';
-import { createReadStream, existsSync } from 'node:fs';
+import { createReadStream, existsSync, realpathSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 import { createInterface } from 'node:readline';
 import { createHash } from 'node:crypto';
 import { join, relative } from 'node:path';
 
-const MANAGED_PREFIXES = ['.devin/', '.squad/', '.cursor/'];
+const MANAGED_PREFIXES = ['.squad/', '.cursor/'];
 
 async function hashFile(path) {
   const hash = createHash('sha256');
@@ -70,6 +71,7 @@ export async function writeInstallState(targetDir, version, extractDir) {
     memory_schema_version: squadJson.memory_schema_version,
     installed_at: new Date().toISOString(),
     managed_files: managedFiles,
+    retired_files: {},
     ownership: squadJson.ownership
   };
 
@@ -81,6 +83,14 @@ async function main() {
   await writeInstallState(targetDir, version, extractDir);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+function isMain() {
+  try {
+    return Boolean(process.argv[1]) && pathToFileURL(realpathSync(process.argv[1])).href === import.meta.url;
+  } catch {
+    return false;
+  }
+}
+
+if (isMain()) {
   main();
 }

@@ -29,6 +29,7 @@
         "skills": { "type": "object", "additionalProperties": { "$ref": "#/definitions/component" } },
         "workflows": { "type": "object", "additionalProperties": { "$ref": "#/definitions/component" } },
         "schemas": { "type": "object", "additionalProperties": { "$ref": "#/definitions/component" } },
+        "manifests": { "type": "object", "additionalProperties": { "$ref": "#/definitions/component" } },
         "rules": { "type": "object", "additionalProperties": { "$ref": "#/definitions/component" } },
         "hooks": { "type": "object", "additionalProperties": { "$ref": "#/definitions/component" } }
       },
@@ -50,7 +51,6 @@
       "required": ["path", "managed"],
       "properties": {
         "path": { "type": "string" },
-        "devin_profile": { "type": "string" },
         "cursor_profile": { "type": "string" },
         "cursor_path": { "type": "string" },
         "description": { "type": "string" },

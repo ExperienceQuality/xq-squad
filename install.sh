@@ -215,6 +215,7 @@ write_install_state_posix() {
       printf '    "%s": "%s"' "$_rel" "$_hash"
     done
     printf '\n  },\n'
+    printf '  "retired_files": {},\n'
     # Copy the ownership object verbatim from squad.json (from the
     # "ownership": { line through its closing brace at the same indentation).
     sed -n '/"ownership"[[:space:]]*:[[:space:]]*{/,/^  }/p' "$_squad_json"
