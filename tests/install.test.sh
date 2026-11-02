@@ -28,7 +28,7 @@ if ! grep -q 'XQ_SQUAD_MANAGED_START version:v1.0.0' "$CONSUMER/AGENTS.md"; then
 fi
 
 # Verify key files
-for f in AGENTS.md .squad/squad.json .devin/agents/analyst.md .devin/skills/squad-delivery/SKILL.md; do
+for f in AGENTS.md .squad/squad.json .cursor/agents/analyst.md .cursor/skills/squad-delivery/SKILL.md; do
   if [[ ! -e "$CONSUMER/$f" ]]; then
     echo "Missing $f after install" >&2
     exit 1
