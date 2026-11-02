@@ -80,7 +80,7 @@ export async function decide(input, { helpersRoot = HOOK_ROOT } = {}) {
   return deny(`${raw} is outside the claimed scope of ${owner.deliveryId} (${reason})`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && pathToFileURL(fs.realpathSync(process.argv[1])).href === import.meta.url) {
   const input = await readStdinJson();
   let out;
   try {

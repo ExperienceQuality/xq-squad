@@ -160,6 +160,16 @@ WRITE_STATE="$EXTRACT_DIR/.squad/scripts/write-install-state.mjs"
 [ -f "$WRITE_STATE" ] || error "archive missing .squad/scripts/write-install-state.mjs"
 MERGE_HOOKS="$EXTRACT_DIR/.squad/scripts/merge-cursor-hooks.mjs"
 
+# Node 22+ runs the helper scripts and the Cursor hooks. Without it the rest
+# installs with the POSIX fallbacks, but .cursor/hooks.json is not written or
+# merged: hooks.json entries pointing at a missing or too-old Node would fail.
+NODE_OK=false
+if command -v node >/dev/null 2>&1; then
+  _node_major="$(node --version 2>/dev/null | sed -n 's/^v\([0-9][0-9]*\)\..*/\1/p')"
+  if [ -n "$_node_major" ] && [ "$_node_major" -ge 22 ]; then NODE_OK=true; fi
+fi
+HOOKS_SKIPPED=false
+
 # POSIX fallback for merge-agents.mjs, used when Node.js is unavailable.
 # Strips any existing managed block (between the marker lines, inclusive) from
 # the target AGENTS.md, then appends the managed block extracted from the new
@@ -204,6 +214,7 @@ write_install_state_posix() {
         AGENTS.md|.squad/*|.cursor/*) ;;
         *) continue ;;
       esac
+      if [ "$_rel" = ".cursor/hooks.json" ] && [ "$HOOKS_SKIPPED" = true ]; then continue; fi
       _hash="$(sha256_file "$_f")"
       if [ "$_rel" = ".cursor/hooks.json" ] && [ -f "$1/$_rel" ]; then
         _hash="$(sha256_file "$1/$_rel")"
@@ -232,11 +243,15 @@ copy_adapter_dir() {
   _item="$1"
   for _f in $(cd "$EXTRACT_DIR" && find "$_item" -type f | LC_ALL=C sort); do
     _dst="$TARGET/$_f"
+    if [ "$_f" = ".cursor/hooks.json" ] && [ "$NODE_OK" != true ]; then
+      HOOKS_SKIPPED=true
+      continue
+    fi
     mkdir -p "$(dirname "$_dst")"
     if [ ! -e "$_dst" ]; then
       cp "$EXTRACT_DIR/$_f" "$_dst"
     elif [ "$_f" = ".cursor/hooks.json" ]; then
-      if ! command -v node >/dev/null 2>&1 || ! node "$MERGE_HOOKS" "$_dst" "$EXTRACT_DIR/$_f" "$_dst"; then
+      if ! node "$MERGE_HOOKS" "$_dst" "$EXTRACT_DIR/$_f" "$_dst"; then
         [ -e "$_dst.squad-upstream" ] || cp "$EXTRACT_DIR/$_f" "$_dst.squad-upstream"
         KEPT_FILES="$KEPT_FILES $_f"
       fi
@@ -254,7 +269,7 @@ for item in AGENTS.md .cursor .squad; do
   if [ "$item" = "AGENTS.md" ]; then
     if [ -f "$TARGET/AGENTS.md" ]; then
       # Merge managed section
-      if command -v node >/dev/null 2>&1; then
+      if [ "$NODE_OK" = true ]; then
         node "$MERGE_AGENTS" "$TARGET/AGENTS.md" "$src" "$TARGET/AGENTS.md"
       else
         merge_agents_posix "$TARGET/AGENTS.md" "$src" "$TARGET/AGENTS.md"
@@ -270,7 +285,7 @@ for item in AGENTS.md .cursor .squad; do
 done
 
 # Record install state
-if command -v node >/dev/null 2>&1; then
+if [ "$NODE_OK" = true ]; then
   node "$WRITE_STATE" "$TARGET" "$VERSION" "$EXTRACT_DIR"
 else
   write_install_state_posix "$TARGET" "$VERSION" "$EXTRACT_DIR"
@@ -280,4 +295,7 @@ echo "XQ Squad $VERSION installed into $TARGET"
 if [ -n "$KEPT_FILES" ]; then
   echo "Kept existing consumer files (upstream version written to <file>.squad-upstream):"
   for _f in $KEPT_FILES; do echo "  $_f"; done
+fi
+if [ "$HOOKS_SKIPPED" = true ]; then
+  echo "XQ Squad: Node 22+ not found, so Cursor hooks were NOT installed and guardrails are UNENFORCED. Install Node 22+ and rerun update.sh." >&2
 fi
