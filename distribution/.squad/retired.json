@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "retired": [
+    { "prefix": ".devin/", "since": "2.0.0", "decision": "D1",
+      "reason": "The Devin adapter was retired: xq-squad supports Cursor only." }
+  ]
+}
