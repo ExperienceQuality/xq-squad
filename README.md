@@ -237,7 +237,7 @@ Run the normal update command with the 2.0 release. The updater lists the `.devi
 - files you changed are kept and reported, and the update still succeeds;
 - your `.devin/rules/local-*` and `.devin/agents/local-*` files are never touched.
 
-If you kept the files, delete them later with `update.sh --target . --remove-retired`.
+If you kept the files, delete them later with `update.sh --target . --version v2.0.0 --remove-retired`.
 If you still use Devin, stay on 1.x.
 
 ### Rollback
