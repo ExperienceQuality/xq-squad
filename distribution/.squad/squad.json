@@ -6,12 +6,8 @@
   "config_schema_version": "1.0.0",
   "memory_schema_version": "1.0.0",
   "repository": "https://github.com/ExperienceQuality/xq-squad",
-  "description": "Repository-native agent squad for software delivery (Devin and Cursor adapters).",
+  "description": "Repository-native agent squad for software delivery (Cursor adapter).",
   "runtimes": {
-    "devin": {
-      "adapter_root": "../.devin",
-      "description": "Devin profiles and skills."
-    },
     "cursor": {
       "adapter_root": "../.cursor",
       "description": "Cursor rules, subagents, skills, and hooks."
@@ -26,35 +22,30 @@
       },
       "analyst": {
         "path": "agents/analyst.md",
-        "devin_profile": "../.devin/agents/analyst.md",
         "description": "Repository discovery and impact analysis.",
         "managed": true,
         "cursor_profile": "../.cursor/agents/analyst.md"
       },
       "implementer": {
         "path": "agents/implementer.md",
-        "devin_profile": "../.devin/agents/implementer.md",
         "description": "Assigned code changes following conventions.",
         "managed": true,
         "cursor_profile": "../.cursor/agents/implementer.md"
       },
       "tester": {
         "path": "agents/tester.md",
-        "devin_profile": "../.devin/agents/tester.md",
         "description": "Relevant checks and test execution.",
         "managed": true,
         "cursor_profile": "../.cursor/agents/tester.md"
       },
       "reviewer": {
         "path": "agents/reviewer.md",
-        "devin_profile": "../.devin/agents/reviewer.md",
         "description": "Change review and risk identification.",
         "managed": true,
         "cursor_profile": "../.cursor/agents/reviewer.md"
       },
       "memory-maintainer": {
         "path": "agents/memory-maintainer.md",
-        "devin_profile": "../.devin/agents/memory-maintainer.md",
         "description": "Durable memory reconciliation and update.",
         "managed": true,
         "cursor_profile": "../.cursor/agents/memory-maintainer.md"
@@ -62,22 +53,19 @@
     },
     "skills": {
       "squad-delivery": {
-        "path": "../.devin/skills/squad-delivery/SKILL.md",
+        "path": "../.cursor/skills/squad-delivery/SKILL.md",
         "description": "On-demand delivery workflow skill.",
-        "managed": true,
-        "cursor_path": "../.cursor/skills/squad-delivery/SKILL.md"
+        "managed": true
       },
       "train-me": {
-        "path": "../.devin/skills/train-me/SKILL.md",
+        "path": "../.cursor/skills/train-me/SKILL.md",
         "description": "Patient tutor that helps the user learn any technical topic.",
-        "managed": true,
-        "cursor_path": "../.cursor/skills/train-me/SKILL.md"
+        "managed": true
       },
       "fetch-openapi-spec": {
-        "path": "../.devin/skills/fetch-openapi-spec/SKILL.md",
+        "path": "../.cursor/skills/fetch-openapi-spec/SKILL.md",
         "description": "Fetch the latest OpenAPI contract for a service from the centralized xq-luthor repository.",
-        "managed": true,
-        "cursor_path": "../.cursor/skills/fetch-openapi-spec/SKILL.md"
+        "managed": true
       }
     },
     "workflows": {
@@ -109,6 +97,13 @@
       },
       "delivery-session": {
         "path": "schemas/delivery-session.schema.json",
+        "managed": true
+      }
+    },
+    "manifests": {
+      "retired": {
+        "path": "retired.json",
+        "description": "Files no longer shipped, with the reason and the release that retired them.",
         "managed": true
       }
     },
@@ -144,9 +139,6 @@
   },
   "ownership": {
     "upstream_managed": [
-      ".devin/agents/**",
-      ".devin/skills/**",
-      ".devin/rules/**",
       ".squad/agents/**",
       ".squad/workflows/**",
       ".squad/schemas/**",
@@ -167,8 +159,6 @@
       ".squad/MEMORY.md",
       ".squad/knowledge/**",
       ".squad/memory/**",
-      ".devin/rules/local-*",
-      ".devin/agents/local-*",
       ".cursor/agents/local-*",
       ".cursor/rules/local-*",
       ".cursor/skills/local-*",
