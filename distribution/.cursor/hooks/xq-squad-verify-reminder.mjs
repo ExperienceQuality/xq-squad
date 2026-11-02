@@ -2,6 +2,8 @@
 // changes, send one follow-up so VERIFICATION and MEMORY_UPDATE are reported
 // before the delivery ends. It never loops (loop_limit 1 in hooks.json, and
 // loop_count is checked here).
+import { realpathSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { readStdinJson, respond, projectDir, deliveryIdOf } from './xq-squad-hook-io.mjs';
 
@@ -25,7 +27,7 @@ export function decide(input, { gitStatus } = {}) {
   };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && pathToFileURL(realpathSync(process.argv[1])).href === import.meta.url) {
   let out = {};
   try {
     out = decide(await readStdinJson());

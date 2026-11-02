@@ -99,8 +99,13 @@ if [ "$VERSION_ORDER" = "same" ]; then
     node "$INSTALLED_UPGRADE" --retired-only "$TARGET" --retired=remove
     exit 0
   fi
-  echo "Already at $VERSION. No update needed."
-  exit 0
+  # An install made without Node 22+ has no squad hooks; rerunning update.sh
+  # at the same version installs them.
+  if [ -f "$TARGET/.cursor/hooks.json" ] && grep -q 'xq-squad-' "$TARGET/.cursor/hooks.json"; then
+    echo "Already at $VERSION. No update needed."
+    exit 0
+  fi
+  echo "Already at $VERSION, but the squad Cursor hooks are not installed; installing them."
 fi
 
 if [ "$VERSION_ORDER" = "older" ] && [ "$ALLOW_DOWNGRADE" != true ]; then

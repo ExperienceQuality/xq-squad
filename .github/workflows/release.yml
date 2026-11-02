@@ -25,7 +25,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version: 22
 
       - name: Resolve version
         id: version
@@ -74,6 +74,9 @@ jobs:
           bash tests/upgrade.test.sh
           bash tests/e2e.test.sh
           bash tests/install-cursor.test.sh
+          bash tests/upgrade-retired.test.sh
+          bash tests/concurrent-delivery.test.sh
+          bash tests/node-floor.test.sh
 
       - name: Package release
         if: steps.guard.outputs.skipped != 'true'
