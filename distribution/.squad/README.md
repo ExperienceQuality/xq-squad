@@ -3,7 +3,7 @@
 Repository-native agent squad for Cursor. No hosted service. No database. The Cursor Agent is the interface. This `.squad/` directory is the canonical, runtime-independent source of truth; `.cursor/` only adapts it to the runtime and must not weaken it.
 
 Installed release: see `release_tag` in `.squad/squad.json` (or `.squad/install-state.json`).
-Current upstream release: v1.4.0 — [releases](https://github.com/ExperienceQuality/xq-squad/releases),
+Current upstream release: v2.0.0 — [releases](https://github.com/ExperienceQuality/xq-squad/releases),
 [changelog](https://github.com/ExperienceQuality/xq-squad/blob/main/CHANGELOG.md).
 
 ## Layout
@@ -34,7 +34,7 @@ AGENTS.md                          # Always-on Lead instructions, managed sectio
 
 ## How to use
 
-1. Install a pinned release: `install.sh --target . --version v1.4.0` (or `curl -LsSf <release>/install.sh | sh -s -- --target . --version v1.4.0`).
+1. Install a pinned release: `install.sh --target . --version v2.0.0` (or `curl -LsSf <release>/install.sh | sh -s -- --target . --version v2.0.0`).
 2. Open Cursor Agent on this repository and describe the task in plain language — no commands or special syntax needed. `AGENTS.md` and `.cursor/rules/xq-squad.mdc` make the main agent the Agent Lead automatically.
 3. The Lead reads this README, follows `agents/lead.md`, and invokes the `squad-delivery` skill when useful.
 4. Specialist profiles in `.cursor/agents/` are delegated to as Cursor subagents; otherwise the Lead performs each role sequentially.

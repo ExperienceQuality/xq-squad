@@ -2,7 +2,7 @@
 
 Install a versioned agent squad into a GitHub repository so the Cursor Agent runs your software tasks through one repeatable, verified delivery process.
 
-Current release: **v1.4.0** — see [CHANGELOG.md](CHANGELOG.md) and
+Current release: **v2.0.0** — see [CHANGELOG.md](CHANGELOG.md) and
 [GitHub Releases](https://github.com/ExperienceQuality/xq-squad/releases).
 
 ## What it is and who it's for
@@ -106,7 +106,7 @@ In Cursor, the `xq-squad-git-guard` hook also asks you to approve each
 Pipe the installer straight into `sh` (POSIX-compatible, no download needed):
 
 ```bash
-curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v1.4.0/install.sh | sh -s -- --target . --version v1.4.0
+curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v2.0.0/install.sh | sh -s -- --target . --version v2.0.0
 ```
 
 The installer is self-contained: helper scripts ship inside the release archive.
@@ -114,20 +114,20 @@ If the target repo has uncommitted changes and stdin is not a TTY (e.g. piped or
 CI), the installer refuses to continue — pass `--yes` to proceed non-interactively:
 
 ```bash
-curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v1.4.0/install.sh | sh -s -- --target . --version v1.4.0 --yes
+curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v2.0.0/install.sh | sh -s -- --target . --version v2.0.0 --yes
 ```
 
 Or download and run it yourself:
 
 ```bash
-curl -fL https://github.com/ExperienceQuality/xq-squad/releases/download/v1.4.0/install.sh -o /tmp/squad-install.sh
-sh /tmp/squad-install.sh --target . --version v1.4.0
+curl -fL https://github.com/ExperienceQuality/xq-squad/releases/download/v2.0.0/install.sh -o /tmp/squad-install.sh
+sh /tmp/squad-install.sh --target . --version v2.0.0
 ```
 
 Or use a local archive:
 
 ```bash
-bash install.sh --target . --version v1.4.0 --archive squad-v1.4.0.tar.gz --checksum squad-v1.4.0.tar.gz.sha256
+bash install.sh --target . --version v2.0.0 --archive squad-v2.0.0.tar.gz --checksum squad-v2.0.0.tar.gz.sha256
 ```
 
 ### `install.sh` flags
@@ -164,13 +164,13 @@ the squad hooks are not installed).
 Pull a newer release into a consumer repo:
 
 ```bash
-curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v1.4.0/update.sh | sh -s -- --target . --version v1.4.0
+curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v2.0.0/update.sh | sh -s -- --target . --version v2.0.0
 ```
 
 Or, from a clone of this repo:
 
 ```bash
-bash update.sh --target /path/to/consumer-repo --version v1.4.0
+bash update.sh --target /path/to/consumer-repo --version v2.0.0
 ```
 
 `update.sh` accepts the same flags as `install.sh` except `--dry-run`. It
@@ -498,7 +498,7 @@ tests protocol behavior only, not real runtime compatibility.
 Package a release locally (writes to `.releases/`):
 
 ```bash
-bash scripts/package-release.sh --version v1.4.0
+bash scripts/package-release.sh --version v2.0.0
 ```
 
 ## Releasing
