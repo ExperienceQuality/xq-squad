@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.1.0] - 2026-11-15
+
+### Added
+
+- New managed skill `caveman` (`.cursor/skills/caveman/SKILL.md`): terse
+  session voice that drops fluff while keeping technical facts verbatim.
+  Trigger with `/caveman`, "caveman mode", "talk like caveman", "be brief",
+  or "less tokens"; stop with "stop caveman" or "normal mode". Levels:
+  `lite`, `full` (default), `ultra`, plus `/caveman status`. Adapted from
+  [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman)
+  (Apache-2.0). Registered in `squad.json` under `components.skills`.
+
 ## [2.0.0] - 2026-11-02
 
 ### Removed

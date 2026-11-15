@@ -2,7 +2,7 @@
 
 Install a versioned agent squad into a GitHub repository so the Cursor Agent runs your software tasks through one repeatable, verified delivery process.
 
-Current release: **v2.0.0** — see [CHANGELOG.md](CHANGELOG.md) and
+Current release: **v2.1.0** — see [CHANGELOG.md](CHANGELOG.md) and
 [GitHub Releases](https://github.com/ExperienceQuality/xq-squad/releases).
 
 ## What it is and who it's for
@@ -106,7 +106,7 @@ In Cursor, the `xq-squad-git-guard` hook also asks you to approve each
 Pipe the installer straight into `sh` (POSIX-compatible, no download needed):
 
 ```bash
-curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v2.0.0/install.sh | sh -s -- --target . --version v2.0.0
+curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v2.1.0/install.sh | sh -s -- --target . --version v2.1.0
 ```
 
 The installer is self-contained: helper scripts ship inside the release archive.
@@ -114,20 +114,20 @@ If the target repo has uncommitted changes and stdin is not a TTY (e.g. piped or
 CI), the installer refuses to continue — pass `--yes` to proceed non-interactively:
 
 ```bash
-curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v2.0.0/install.sh | sh -s -- --target . --version v2.0.0 --yes
+curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v2.1.0/install.sh | sh -s -- --target . --version v2.1.0 --yes
 ```
 
 Or download and run it yourself:
 
 ```bash
-curl -fL https://github.com/ExperienceQuality/xq-squad/releases/download/v2.0.0/install.sh -o /tmp/squad-install.sh
-sh /tmp/squad-install.sh --target . --version v2.0.0
+curl -fL https://github.com/ExperienceQuality/xq-squad/releases/download/v2.1.0/install.sh -o /tmp/squad-install.sh
+sh /tmp/squad-install.sh --target . --version v2.1.0
 ```
 
 Or use a local archive:
 
 ```bash
-bash install.sh --target . --version v2.0.0 --archive squad-v2.0.0.tar.gz --checksum squad-v2.0.0.tar.gz.sha256
+bash install.sh --target . --version v2.1.0 --archive squad-v2.1.0.tar.gz --checksum squad-v2.1.0.tar.gz.sha256
 ```
 
 ### `install.sh` flags
@@ -164,13 +164,13 @@ the squad hooks are not installed).
 Pull a newer release into a consumer repo:
 
 ```bash
-curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v2.0.0/update.sh | sh -s -- --target . --version v2.0.0
+curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v2.1.0/update.sh | sh -s -- --target . --version v2.1.0
 ```
 
 Or, from a clone of this repo:
 
 ```bash
-bash update.sh --target /path/to/consumer-repo --version v2.0.0
+bash update.sh --target /path/to/consumer-repo --version v2.1.0
 ```
 
 `update.sh` accepts the same flags as `install.sh` except `--dry-run`. It
@@ -237,7 +237,7 @@ Run the normal update command with the 2.0 release. The updater lists the `.devi
 - files you changed are kept and reported, and the update still succeeds;
 - your `.devin/rules/local-*` and `.devin/agents/local-*` files are never touched.
 
-If you kept the files, delete them later with `update.sh --target . --version v2.0.0 --remove-retired`.
+If you kept the files, delete them later with `update.sh --target . --version v2.1.0 --remove-retired`.
 If you still use Devin, stay on 1.x.
 
 ### Rollback
@@ -369,6 +369,18 @@ simply, uses analogies and short annotated examples, guides with questions
 when you are stuck, and ends with one suggested next step. It always explains
 the why, even when asked to "just tell me". It has no commands or options.
 
+### `caveman`
+
+Terse session voice: answer first, drop fluff, keep every technical fact.
+Say `/caveman`, "caveman mode", "talk like caveman", "be brief", or "less
+tokens" to turn it on for the rest of the session; say "stop caveman" or
+"normal mode" to turn it off. Levels: `/caveman lite`, `/caveman` /
+`/caveman full` (default), `/caveman ultra`, and `/caveman status`. Code,
+commands, paths, and errors stay byte-exact. Anything persisted outside chat
+(code, commits, docs, PRs, memory) is written in normal prose. Adapted from
+[JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman)
+(Apache-2.0).
+
 ### `fetch-openapi-spec`
 
 Syncs OpenAPI contracts from the centralized
@@ -426,7 +438,7 @@ AGENTS.md                         # Managed section with the Agent Lead contract
 .cursor/
   rules/xq-squad.mdc              # Always-on Lead rule for the Cursor Agent
   agents/                         # Cursor subagents for the same five roles
-  skills/                         # squad-delivery, train-me, fetch-openapi-spec
+  skills/                         # squad-delivery, train-me, caveman, fetch-openapi-spec
   hooks.json                      # Merge-managed project hooks
   hooks/xq-squad-*.mjs            # git guard, scope guard, verify reminder (+ shared I/O helper)
 .squad/
@@ -498,7 +510,7 @@ tests protocol behavior only, not real runtime compatibility.
 Package a release locally (writes to `.releases/`):
 
 ```bash
-bash scripts/package-release.sh --version v2.0.0
+bash scripts/package-release.sh --version v2.1.0
 ```
 
 ## Releasing
