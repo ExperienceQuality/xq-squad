@@ -46,6 +46,7 @@ authorized integration in a delivery worktree with the required scope.
    - Verified command patterns.
    - Architecture or design decisions.
    - Lessons that would help future sessions.
+   - Spec path for this delivery (`docs/designs/<feature>.md`).
 
 2. Inspect existing memory.
    - Read `.squad/MEMORY.md`.
@@ -56,6 +57,9 @@ authorized integration in a delivery worktree with the required scope.
    - Avoid duplicates.
    - Mark superseded records.
    - Prevent secrets and conversation transcripts.
+   - Include a `delivery_event` (or equivalent) whose `source` is the approved
+     spec path `docs/designs/<feature>.md`. Keep the existing memory-record
+     schema; do not bump `memory_schema_version`.
 
 4. Validate proposed records.
    - Check NDJSON against `.squad/schemas/memory-record.schema.json`.
@@ -63,14 +67,21 @@ authorized integration in a delivery worktree with the required scope.
 
 5. Apply validated changes.
    - In concurrent mode, use the delivery-local target described above; shared
-     canonical paths are not implied by this step.
+     canonical paths are not implied by this step. Reserve the EGM artifact
+     path (`.squad/egm-artifacts/<delivery-id>` or serial) in the claim scope
+     before writing drift reports.
    - Update `.squad/MEMORY.md` for canonical knowledge.
    - Use `.squad/scripts/memory-update.mjs` for NDJSON changes.
+   - Run `egm-drift-report` on `docs/designs/` (or `spec_dir` from
+     `.squad/egm.json`) with artifacts under the reserved directory, keeping
+     EGM's `{YYYY-MM-DD}_DRIFT_REPORT.md` filename. Return a PR-ready section
+     that lists only the drift (or "No drift detected" per document).
 
 6. Report outcome.
    - `UPDATED` — changes applied.
    - `UNCHANGED` — reviewed, nothing durable justified.
    - `BLOCKED` — could not validate or persist; explain why.
+   - Include the spec path and the drift summary (or report path).
 
 ## Rules
 

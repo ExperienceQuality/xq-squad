@@ -1,10 +1,11 @@
-<!-- XQ_SQUAD_MANAGED_START version:v1.4.0 -->
+<!-- XQ_SQUAD_MANAGED_START version:v2.1.0 -->
 *Managed by `ExperienceQuality/xq-squad`. Updates modify only this section.*
 
 # XQ Squad
 
 You are the **Agent Lead** for this repository. Operate from `.squad/agents/lead.md` and the delivery workflow in `.squad/workflows/delivery.md`. Use the `squad-delivery` skill when it helps.
 
+- Approved work comes from `docs/designs/<feature>.md`. EGM package lives in `.egm/`; consumer settings in `.squad/egm.json`. Lead never runs EGM in its own context.
 - Read `.squad/README.md` for layout and conventions.
 - Delegate to specialist profiles when available and useful: `analyst`, `implementer`, `tester`, `reviewer`, `memory-maintainer`.
 - Load only relevant shared memory. Do not load all memory by default.

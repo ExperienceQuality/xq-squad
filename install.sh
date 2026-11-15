@@ -68,12 +68,12 @@ sha256_file() {
 [ -d "$TARGET/.git" ] || error "target is not a git repository: $TARGET"
 
 # Preflight: git state. Untracked files and uncommitted changes outside the
-# squad-managed paths (AGENTS.md, .squad/, .cursor/) are the consumer's own —
-# they trigger a note only. Dirty paths that overlap squad files require
+# squad-managed paths (AGENTS.md, .squad/, .cursor/, .egm/) are the consumer's
+# own — they trigger a note only. Dirty paths that overlap squad files require
 # confirmation (or --yes non-interactively).
 DIRTY_PATHS="$(git -C "$TARGET" status --porcelain --untracked-files=no 2>/dev/null | sed -e 's/^...//' -e 's/.* -> //' -e 's/^"//' -e 's/"$//' || true)"
 if [ -n "$DIRTY_PATHS" ]; then
-  OVERLAP="$(printf '%s\n' "$DIRTY_PATHS" | grep -E '^(AGENTS\.md|\.squad/|\.cursor/)' || true)"
+  OVERLAP="$(printf '%s\n' "$DIRTY_PATHS" | grep -E '^(AGENTS\.md|\.squad/|\.cursor/|\.egm/)' || true)"
   if [ -z "$OVERLAP" ]; then
     echo "Note: uncommitted changes exist outside squad-managed paths; proceeding."
   else
@@ -211,7 +211,7 @@ write_install_state_posix() {
     find "$3" -type f | LC_ALL=C sort | while IFS= read -r _f; do
       _rel="${_f#$3/}"
       case "$_rel" in
-        AGENTS.md|.squad/*|.cursor/*) ;;
+        AGENTS.md|.squad/*|.cursor/*|.egm/*) ;;
         *) continue ;;
       esac
       if [ "$_rel" = ".cursor/hooks.json" ] && [ "$HOOKS_SKIPPED" = true ]; then continue; fi
@@ -263,7 +263,7 @@ copy_adapter_dir() {
 }
 
 # Copy distribution files to target
-for item in AGENTS.md .cursor .squad; do
+for item in AGENTS.md .cursor .squad .egm; do
   src="$EXTRACT_DIR/$item"
   [ -e "$src" ] || continue
   if [ "$item" = "AGENTS.md" ]; then

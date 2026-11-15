@@ -74,10 +74,13 @@ trap 'rm -f "$FILE_LIST"; rm -rf "$STAGE_DIR"' EXIT
   find . -type f | sed 's|^\./||' | sort > "$FILE_LIST"
 )
 
-# Detect forbidden executable extensions outside .sh and .mjs
+# Detect forbidden executable extensions outside known text/asset types.
+# Vendored EGM under .egm/ may include .svg, .yaml, .mdc, LICENSE, NOTICE,
+# and the .egm-source-sha pin; allow those without rewriting EGM files.
 while IFS= read -r f; do
   case "$f" in
-    *.sh|*.mjs|*.md|*.json|*.ndjson) ;;
+    *.sh|*.mjs|*.md|*.json|*.ndjson|*.svg|*.yaml|*.yml|*.mdc|*.txt) ;;
+    .egm/LICENSE|.egm/NOTICE|.egm/.egm-source-sha|*/LICENSE|*/NOTICE) ;;
     *)
       if file "$DIST_DIR/$f" | grep -qE 'executable|script'; then
         echo "Error: forbidden executable file in distribution: $f" >&2

@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ExperienceQuality/xq-squad/schemas/egm-config.schema.json",
+  "title": "XQ Squad EGM consumer configuration",
+  "description": "Consumer-owned Elephant-Goldfish Model settings for this repository. intake_policy applies only after a completed Goldfish intake review writes a report. Incomplete reviews and fresh-context failures always end BLOCKED. null means the owner has not chosen yet — the Lead must ask and must not pick a policy. \"block\": any EGM blocker (🔴) finding ends intake BLOCKED; major/nit findings are reported but do not block. \"warn\": all findings are recorded and intake continues.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "egm_package_version",
+    "egm_root",
+    "spec_dir",
+    "artifact_dir",
+    "intake_policy"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "egm_package_version": {
+      "type": "string",
+      "description": "Pinned EGM package version vendored under egm_root."
+    },
+    "egm_root": {
+      "type": "string",
+      "description": "Repository-relative path to the vendored EGM Cursor package."
+    },
+    "spec_dir": {
+      "type": "string",
+      "description": "Directory of approved feature specs (docs/designs by default)."
+    },
+    "artifact_dir": {
+      "type": "string",
+      "description": "Directory for EGM review and drift reports. Never write into the plugin tree."
+    },
+    "intake_policy": {
+      "description": "How the Lead treats a completed intake review with blocker findings. null = unset (BLOCKED until set).",
+      "oneOf": [
+        { "type": "null" },
+        { "type": "string", "enum": ["block", "warn"] }
+      ]
+    }
+  }
+}

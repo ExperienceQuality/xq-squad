@@ -26,6 +26,15 @@ done
 [[ -f "$DIST_DIR/.squad/retired.json" ]] || error ".squad/retired.json missing"
 [[ -f "$DIST_DIR/.squad/agents/lead.md" ]] || error "Lead contract missing"
 
+# Vendored Elephant-Goldfish Model (EGM) Cursor package
+[[ -f "$DIST_DIR/.egm/LICENSE" ]] || error "vendored EGM LICENSE missing"
+[[ -f "$DIST_DIR/.egm/NOTICE" ]] || error "vendored EGM NOTICE missing"
+[[ -f "$DIST_DIR/.egm/.egm-source-sha" ]] || error "vendored EGM .egm-source-sha missing"
+[[ -f "$DIST_DIR/.egm/skills/egm-review/SKILL.md" ]] || error "vendored EGM egm-review skill missing"
+[[ -f "$DIST_DIR/.egm/skills/egm-drift-report/SKILL.md" ]] || error "vendored EGM egm-drift-report skill missing"
+[[ -f "$DIST_DIR/.squad/egm.json" ]] || error ".squad/egm.json starter missing"
+[[ -f "$DIST_DIR/.squad/schemas/egm-config.schema.json" ]] || error "egm-config schema missing"
+
 # Cursor adapter (the only supported runtime) against documented formats and canonical contracts
 node "${REPO_ROOT}/scripts/validate-cursor-adapter.mjs" "$DIST_DIR" || error "runtime adapter validation failed"
 
@@ -71,6 +80,11 @@ done
 # Validate squad.json against schema
 if [[ -f "$DIST_DIR/.squad/squad.json" && -f "$DIST_DIR/.squad/schemas/squad-config.schema.json" ]]; then
   node "${REPO_ROOT}/scripts/validate-squad-config.mjs" "$DIST_DIR/.squad/schemas/squad-config.schema.json" "$DIST_DIR/.squad/squad.json" || error "squad.json does not validate against squad-config.schema.json"
+fi
+
+# Validate starter egm.json against its schema
+if [[ -f "$DIST_DIR/.squad/egm.json" && -f "$DIST_DIR/.squad/schemas/egm-config.schema.json" ]]; then
+  node "${REPO_ROOT}/scripts/validate-squad-config.mjs" "$DIST_DIR/.squad/schemas/egm-config.schema.json" "$DIST_DIR/.squad/egm.json" || error "egm.json does not validate against egm-config.schema.json"
 fi
 
 # Concurrent-delivery helpers: import/export sanity (opt-in feature, Node >= 20)

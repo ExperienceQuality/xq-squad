@@ -67,14 +67,16 @@ export async function decide(input, { helpersRoot = HOOK_ROOT } = {}) {
   if (sessionDelivery) {
     const own = active.find((r) => r.deliveryId === sessionDelivery);
     if (!own) return deny(`delivery ${sessionDelivery} has no ACTIVE claim`);
-    if (!inside(file, own.worktreePath)) return deny(`${raw} is outside delivery worktree ${own.worktreePath}`);
+    // Compare realish paths: claim records may store non-realpath worktrees
+    // (macOS /var -> /private/var), while file is always realish'd above.
+    if (!inside(file, realish(own.worktreePath))) return deny(`${raw} is outside delivery worktree ${own.worktreePath}`);
   }
 
-  const owner = active.find((r) => inside(file, r.worktreePath));
+  const owner = active.find((r) => inside(file, realish(r.worktreePath)));
   if (!owner) {
     return deliveryIdOf(file) ? deny(`${raw} is in an unclaimed delivery worktree`) : { permission: 'allow' };
   }
-  const res = await helpers.scope.validateWritePaths({ worktreePath: owner.worktreePath, paths: [file], scope: owner.scope });
+  const res = await helpers.scope.validateWritePaths({ worktreePath: realish(owner.worktreePath), paths: [file], scope: owner.scope });
   if (res.status === 'OK') return { permission: 'allow' };
   const reason = res.violations?.[0]?.reason || res.message || res.code;
   return deny(`${raw} is outside the claimed scope of ${owner.deliveryId} (${reason})`);

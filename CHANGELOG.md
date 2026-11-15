@@ -1,5 +1,54 @@
 # Changelog
 
+## [2.1.0] - 2026-11-15
+
+### Added
+
+- Vendored Elephant-Goldfish Model (EGM) 0.1.1 Cursor package under
+  `distribution/.egm/` (Apache License 2.0, with `LICENSE`, `NOTICE`, and
+  `.egm-source-sha`). Not an official Google product; xq-squad does not claim
+  authorship of those files.
+- Consumer-owned `.squad/egm.json` and `schemas/egm-config.schema.json`
+  (`intake_policy`: `null` | `block` | `warn`; no default chosen by this release).
+- Intake Goldfish review: Lead requires `docs/designs/<feature>.md`, delegates
+  `egm-review` (`Step=implementation`) to `analyst`, with direct-dispatch
+  fallback to fresh Tasks. Same-context EGM review is forbidden.
+- Wrap-up `egm-drift-report` via `memory-maintainer`, with delivery memory
+  `source` set to the spec path and PR-ready drift summary when a PR is
+  authorized.
+
+### Changed
+
+- Intake no longer treats a loose GitHub issue as a sufficient work order
+  (behavior change classified Major in CONTRIBUTING; shipped as 2.1.0 by
+  owner request).
+- `implementer`, `tester`, and `reviewer` use the approved spec and its test
+  plan; tester derives cases from the test plan section and keeps unobserved
+  checks as not run; missing test plan blocks the tester. None of them run
+  EGM skills.
+- Install/upgrade treat `.egm/` like other managed trees; fresh installs and
+  upgrades adopt `.egm/**` and install `.squad/egm.json` when missing without
+  overwriting an existing consumer file or `.squad/MEMORY.md`.
+- Upgrade adoption of newly shipped consumer-owned paths (for example
+  `.squad/egm.json`) leaves an existing consumer file alone with no conflict.
+
+### Fixed
+
+- `xq-squad-scope-guard` compares realish worktree paths so macOS
+  `/var` → `/private/var` does not false-deny in-scope writes.
+
+### Migration
+
+- After upgrading, set `.squad/egm.json` `intake_policy` to `block` or `warn`
+  before intake can complete.
+- Ensure approved specs live under `docs/designs/` (or the configured
+  `spec_dir`) with a test plan section.
+- Downgrade to v2.0.0 with
+  `update.sh --target . --version v2.0.0 --allow-downgrade`. A downgrade does
+  not delete 2.1.0-only files (vendored `.egm/` and a still-default
+  `.squad/egm.json`); remove those by hand if desired. v2.0.0 contracts ignore
+  them and fall back to pre-EGM intake.
+
 ## [2.0.0] - 2026-11-02
 
 ### Removed

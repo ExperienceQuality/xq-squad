@@ -259,7 +259,9 @@ export async function upgradeManaged(targetDir, newDir, version, { retired = 'ke
 
   // Files first shipped in this release are absent from the recorded
   // manifest; adopt them unless an unrelated consumer file already occupies
-  // the path, which is reported rather than overwritten.
+  // the path, which is reported rather than overwritten. Consumer-owned paths
+  // (for example `.squad/egm.json`) are installed only when missing; an
+  // existing consumer file is left alone with no conflict.
   const adopted = [];
   for (const abs of newFiles) {
     const rel = relative(newDir, abs).split(sep).join('/');
@@ -272,6 +274,7 @@ export async function upgradeManaged(targetDir, newDir, version, { retired = 'ke
       adopted.push(rel);
       continue;
     }
+    if (isConsumerOwned(rel)) continue;
     if ((await hashFile(consumerPath)) === (await hashFile(abs))) {
       adopted.push(rel); // identical bytes already present; register as managed
     } else {

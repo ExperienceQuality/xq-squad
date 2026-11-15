@@ -1,12 +1,28 @@
 import { readFile } from 'node:fs/promises';
 
+function typeMatches(expected, data) {
+  if (expected === 'null') return data === null;
+  if (expected === 'array') return Array.isArray(data);
+  if (expected === 'object') return data !== null && typeof data === 'object' && !Array.isArray(data);
+  if (data === null) return false;
+  return typeof data === expected;
+}
+
 function validate(schema, data, path = '') {
   const errors = [];
 
+  if (Array.isArray(schema.oneOf)) {
+    const matched = schema.oneOf.some((branch) => validate(branch, data, path).length === 0);
+    if (!matched) {
+      errors.push(`${path || 'root'} does not match any oneOf branch`);
+    }
+    return errors;
+  }
+
   if (schema.type) {
-    const validType = schema.type === 'array' ? Array.isArray(data) : typeof data === schema.type;
-    if (!validType) {
-      errors.push(`${path || 'root'} expected ${schema.type}, got ${Array.isArray(data) ? 'array' : typeof data}`);
+    const types = Array.isArray(schema.type) ? schema.type : [schema.type];
+    if (!types.some((t) => typeMatches(t, data))) {
+      errors.push(`${path || 'root'} expected ${types.join('|')}, got ${data === null ? 'null' : Array.isArray(data) ? 'array' : typeof data}`);
       return errors;
     }
   }

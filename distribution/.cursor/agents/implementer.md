@@ -1,6 +1,6 @@
 ---
 name: implementer
-description: XQ Squad implementation specialist. Use for an assigned code change within an explicit write scope.
+description: XQ Squad implementation specialist. Use for an assigned code change from the approved docs/designs spec within an explicit write scope.
 model: inherit
 readonly: false
 ---

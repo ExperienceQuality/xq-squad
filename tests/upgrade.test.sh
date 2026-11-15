@@ -145,4 +145,88 @@ if ! grep -q 'consumer-owned content' "$CONFLICT_CONSUMER/.cursor/skills/train-m
   exit 1
 fi
 
+# --- EGM: v2.0.0-like install upgraded to 2.1.0 receives .egm/** and egm.json ---
+bash "$REPO_ROOT/scripts/package-release.sh" --version v2.1.0 --output "$RELEASE_DIR"
+V20_STAGE="$TMP_BASE/v20-dist"
+mkdir -p "$V20_STAGE"
+tar -xzf "$RELEASE_DIR/squad-v2.1.0.tar.gz" -C "$V20_STAGE"
+rm -rf "$V20_STAGE/.egm"
+rm -f "$V20_STAGE/.squad/egm.json"
+# Drop egm-config schema registration and ownership globs so the fixture
+# resembles a pre-EGM 2.0.0 catalog while keeping the rest of current core.
+V20_STAGE="$V20_STAGE" node <<'NODE'
+const fs = require('fs');
+const p = process.env.V20_STAGE + '/.squad/squad.json';
+const s = JSON.parse(fs.readFileSync(p, 'utf8'));
+s.version = '2.0.0';
+s.release_tag = 'v2.0.0';
+delete s.components.schemas['egm-config'];
+s.ownership.upstream_managed = s.ownership.upstream_managed.filter((g) => g !== '.egm/**');
+s.ownership.consumer_owned = s.ownership.consumer_owned.filter(
+  (g) => g !== '.squad/egm.json' && g !== '.squad/egm-artifacts/**'
+);
+fs.writeFileSync(p, JSON.stringify(s, null, 2) + '\n');
+NODE
+(
+  cd "$V20_STAGE"
+  find . -type f | sed 's|^\./||' | LC_ALL=C sort > "$TMP_BASE/v20-files"
+  GZIP=-n tar -czf "$RELEASE_DIR/squad-v2.0.0.tar.gz" -T "$TMP_BASE/v20-files"
+)
+shasum -a 256 "$RELEASE_DIR/squad-v2.0.0.tar.gz" | awk '{print $1}' \
+  > "$RELEASE_DIR/squad-v2.0.0.tar.gz.sha256"
+
+EGM_CONSUMER="$TMP_BASE/egm-consumer"
+mkdir -p "$EGM_CONSUMER"
+git -C "$EGM_CONSUMER" init -q
+bash "$REPO_ROOT/install.sh" \
+  --target "$EGM_CONSUMER" \
+  --version v2.0.0 \
+  --archive "$RELEASE_DIR/squad-v2.0.0.tar.gz" \
+  --checksum "$RELEASE_DIR/squad-v2.0.0.tar.gz.sha256"
+[[ ! -e "$EGM_CONSUMER/.egm" ]] || { echo "v2.0.0 fixture should not have .egm" >&2; exit 1; }
+[[ ! -e "$EGM_CONSUMER/.squad/egm.json" ]] || { echo "v2.0.0 fixture should not have egm.json" >&2; exit 1; }
+printf 'keep-me\n' > "$EGM_CONSUMER/.squad/MEMORY.md"
+
+bash "$REPO_ROOT/update.sh" \
+  --target "$EGM_CONSUMER" \
+  --version v2.1.0 \
+  --archive "$RELEASE_DIR/squad-v2.1.0.tar.gz" \
+  --checksum "$RELEASE_DIR/squad-v2.1.0.tar.gz.sha256"
+
+for f in .egm/LICENSE .egm/NOTICE .egm/.egm-source-sha .egm/skills/egm-review/SKILL.md .squad/egm.json; do
+  if [[ ! -e "$EGM_CONSUMER/$f" ]]; then
+    echo "missing after 2.0.0->2.1.0 upgrade: $f" >&2
+    exit 1
+  fi
+done
+if ! grep -qx 'keep-me' "$EGM_CONSUMER/.squad/MEMORY.md"; then
+  echo "consumer MEMORY.md overwritten on EGM upgrade" >&2
+  exit 1
+fi
+if ! node -e "const s=JSON.parse(require('fs').readFileSync('$EGM_CONSUMER/.squad/install-state.json','utf8')); if(s.version!=='2.1.0') process.exit(1); if(!Object.keys(s.managed_files).some(k=>k.startsWith('.egm/'))) process.exit(2)"; then
+  echo ".egm/** not recorded in install-state after upgrade" >&2
+  exit 1
+fi
+
+# Pre-existing consumer egm.json is kept across upgrade.
+EGM_KEEP="$TMP_BASE/egm-keep"
+mkdir -p "$EGM_KEEP"
+git -C "$EGM_KEEP" init -q
+bash "$REPO_ROOT/install.sh" \
+  --target "$EGM_KEEP" \
+  --version v2.0.0 \
+  --archive "$RELEASE_DIR/squad-v2.0.0.tar.gz" \
+  --checksum "$RELEASE_DIR/squad-v2.0.0.tar.gz.sha256"
+printf '%s\n' '{"egm_package_version":"0.1.1","egm_root":".egm","spec_dir":"docs/designs","artifact_dir":".squad/egm-artifacts","intake_policy":"warn"}' \
+  > "$EGM_KEEP/.squad/egm.json"
+bash "$REPO_ROOT/update.sh" \
+  --target "$EGM_KEEP" \
+  --version v2.1.0 \
+  --archive "$RELEASE_DIR/squad-v2.1.0.tar.gz" \
+  --checksum "$RELEASE_DIR/squad-v2.1.0.tar.gz.sha256"
+if ! grep -q '"intake_policy":"warn"' "$EGM_KEEP/.squad/egm.json"; then
+  echo "pre-existing consumer egm.json was overwritten" >&2
+  exit 1
+fi
+
 echo "upgrade tests passed"

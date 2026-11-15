@@ -71,7 +71,8 @@ run_piped_install() {
 
 check_install() {
   local target="$1"
-  for f in AGENTS.md .squad/squad.json .squad/install-state.json .cursor/agents/analyst.md; do
+  for f in AGENTS.md .squad/squad.json .squad/egm.json .squad/install-state.json \
+    .egm/LICENSE .egm/skills/egm-review/SKILL.md .cursor/agents/analyst.md; do
     if [[ ! -e "$target/$f" ]]; then
       echo "Missing $f after minimal install" >&2
       exit 1

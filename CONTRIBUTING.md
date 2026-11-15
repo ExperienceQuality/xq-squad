@@ -7,6 +7,11 @@ This repository is the package source. Consumers receive only `distribution/` fi
 - Edit consumer-facing behavior in `distribution/`.
 - Edit tooling, tests, and docs at the repository root.
 - Do not place source-only files like `install.sh`, `tests/`, or `.gitignore` inside `distribution/`.
+- Files under `distribution/.egm/` are vendored from
+  [google/elephant-goldfish-model](https://github.com/google/elephant-goldfish-model)
+  (Apache License 2.0). Do not author or rewrite them here. Keep `LICENSE`,
+  `NOTICE`, and `.egm-source-sha`. Do not flatten EGM skills into
+  `.cursor/skills/`.
 
 ## Installer portability
 

@@ -2,7 +2,7 @@
 
 Install a versioned agent squad into a GitHub repository so the Cursor Agent runs your software tasks through one repeatable, verified delivery process.
 
-Current release: **v2.0.0** — see [CHANGELOG.md](CHANGELOG.md) and
+Current release: **v2.1.0** — see [CHANGELOG.md](CHANGELOG.md) and
 [GitHub Releases](https://github.com/ExperienceQuality/xq-squad/releases).
 
 ## What it is and who it's for
@@ -19,6 +19,10 @@ specialist roles.
 - `.squad/` is the canonical, runtime-independent core. `.cursor/` is a
   thin adapter over it (see
   [`docs/architecture.md`](docs/architecture.md)).
+- Approved feature work starts from `docs/designs/<feature>.md`. The vendored
+  Elephant-Goldfish Model (EGM) package lives in `.egm/`; consumer settings
+  (including `intake_policy`) live in `.squad/egm.json`. See
+  [`docs/cursor-integration.md`](docs/cursor-integration.md).
 - Project memory lives in the repository itself: `.squad/MEMORY.md` plus NDJSON
   records under `.squad/memory/`, validated by a JSON schema.
 - No hosted service, server, database, GitHub App, or custom runtime. The
@@ -71,11 +75,11 @@ In Cursor, the always-on rule `.cursor/rules/xq-squad.mdc` plays the role of
 | Role | Runs as | Responsibility | Cursor subagent |
 | --- | --- | --- | --- |
 | Agent Lead | The main agent session (never a subagent) | Owns the request from intake to delivery; plans, delegates, integrates, reports | — |
-| `analyst` | Subagent, or the Lead | Repository discovery and impact analysis | `readonly: true` |
-| `implementer` | Subagent, or the Lead | Assigned code changes following repository conventions | `readonly: false` |
-| `tester` | Subagent, or the Lead | Runs the relevant checks and tests | `readonly: false` |
-| `reviewer` | Subagent, or the Lead | Reviews changes and identifies risks | `readonly: true` |
-| `memory-maintainer` | Subagent, or the Lead | Reconciles durable memory; reports `UPDATED`, `UNCHANGED`, or `BLOCKED` | `readonly: false` |
+| `analyst` | Subagent, or the Lead | Discovery plus EGM Goldfish intake review (never in the Lead session) | `readonly: true` |
+| `implementer` | Subagent, or the Lead | Implements the approved `docs/designs` spec; does not run EGM | `readonly: false` |
+| `tester` | Subagent, or the Lead | Derives cases from the spec test plan and runs checks | `readonly: false` |
+| `reviewer` | Subagent, or the Lead | Reviews the diff against the approved spec and test plan | `readonly: true` |
+| `memory-maintainer` | Subagent, or the Lead | Memory update plus `egm-drift-report`; reports `UPDATED`, `UNCHANGED`, or `BLOCKED` | `readonly: false` |
 
 Role contracts live in `.squad/agents/<role>.md`. The Cursor subagents
 (`.cursor/agents/<role>.md`) point to them. If custom subagents are unavailable, the Lead performs each
@@ -106,7 +110,7 @@ In Cursor, the `xq-squad-git-guard` hook also asks you to approve each
 Pipe the installer straight into `sh` (POSIX-compatible, no download needed):
 
 ```bash
-curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v2.0.0/install.sh | sh -s -- --target . --version v2.0.0
+curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v2.1.0/install.sh | sh -s -- --target . --version v2.1.0
 ```
 
 The installer is self-contained: helper scripts ship inside the release archive.
@@ -114,20 +118,20 @@ If the target repo has uncommitted changes and stdin is not a TTY (e.g. piped or
 CI), the installer refuses to continue — pass `--yes` to proceed non-interactively:
 
 ```bash
-curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v2.0.0/install.sh | sh -s -- --target . --version v2.0.0 --yes
+curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v2.1.0/install.sh | sh -s -- --target . --version v2.1.0 --yes
 ```
 
 Or download and run it yourself:
 
 ```bash
-curl -fL https://github.com/ExperienceQuality/xq-squad/releases/download/v2.0.0/install.sh -o /tmp/squad-install.sh
-sh /tmp/squad-install.sh --target . --version v2.0.0
+curl -fL https://github.com/ExperienceQuality/xq-squad/releases/download/v2.1.0/install.sh -o /tmp/squad-install.sh
+sh /tmp/squad-install.sh --target . --version v2.1.0
 ```
 
 Or use a local archive:
 
 ```bash
-bash install.sh --target . --version v2.0.0 --archive squad-v2.0.0.tar.gz --checksum squad-v2.0.0.tar.gz.sha256
+bash install.sh --target . --version v2.1.0 --archive squad-v2.1.0.tar.gz --checksum squad-v2.1.0.tar.gz.sha256
 ```
 
 ### `install.sh` flags
@@ -146,11 +150,11 @@ bash install.sh --target . --version v2.0.0 --archive squad-v2.0.0.tar.gz --chec
 About the `--yes` warning: the installer checks tracked files with uncommitted
 changes (untracked files are ignored). Changes outside the squad-managed paths
 only print a note. Changes under **`AGENTS.md`**, **`.squad/`**,
-or **`.cursor/`** (and, for `update.sh`, **`.devin/`** from a 1.x install) print a warning listing those files, then ask for
+**`.cursor/`**, or **`.egm/`** (and, for `update.sh`, **`.devin/`** from a 1.x install) print a warning listing those files, then ask for
 confirmation on a TTY, fail without a TTY, or continue with `--yes`.
 
 Existing adapter files are not overwritten. If a file under
-`.cursor/` already exists with different content, the installer keeps it,
+`.cursor/` or `.egm/` already exists with different content, the installer keeps it,
 writes the release copy next to it as `<file>.squad-upstream`, leaves it
 consumer-owned, and lists it at the end. An existing `.cursor/hooks.json` is
 merged instead (with Node.js 22 or newer; otherwise it is left untouched and
@@ -164,13 +168,13 @@ the squad hooks are not installed).
 Pull a newer release into a consumer repo:
 
 ```bash
-curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v2.0.0/update.sh | sh -s -- --target . --version v2.0.0
+curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v2.1.0/update.sh | sh -s -- --target . --version v2.1.0
 ```
 
 Or, from a clone of this repo:
 
 ```bash
-bash update.sh --target /path/to/consumer-repo --version v2.0.0
+bash update.sh --target /path/to/consumer-repo --version v2.1.0
 ```
 
 `update.sh` accepts the same flags as `install.sh` except `--dry-run`. It
@@ -237,7 +241,7 @@ Run the normal update command with the 2.0 release. The updater lists the `.devi
 - files you changed are kept and reported, and the update still succeeds;
 - your `.devin/rules/local-*` and `.devin/agents/local-*` files are never touched.
 
-If you kept the files, delete them later with `update.sh --target . --version v2.0.0 --remove-retired`.
+If you kept the files, delete them later with `update.sh --target . --version v2.1.0 --remove-retired`.
 If you still use Devin, stay on 1.x.
 
 ### Rollback
@@ -266,33 +270,57 @@ release version.
 
 ## Usage
 
-After installing, there is nothing to configure — open the consumer
-repository in Cursor and describe your task in Agent chat. The installed
-`AGENTS.md` and `.cursor/rules/xq-squad.mdc` make the Cursor Agent the
-**Agent Lead** automatically; no slash commands or special
-syntax are needed.
+After installing, set `.squad/egm.json` `intake_policy` to `block` or `warn`
+(the starter ships with `null` and intake stays `BLOCKED` until you choose).
+Approved feature work needs a David-approved spec at `docs/designs/<feature>.md`
+(including a test plan). A loose GitHub issue alone is not enough.
 
-**Cursor:** open the repository in Cursor and use Agent chat the same way. The
-always-on rule `.cursor/rules/xq-squad.mdc` makes the Cursor Agent the Lead,
-and the specialists run as Cursor subagents from `.cursor/agents/`. Project
+Open the consumer repository in Cursor and point the Agent at that spec. The
+installed `AGENTS.md` and `.cursor/rules/xq-squad.mdc` make the Cursor Agent the
+**Agent Lead** automatically.
+
+**Cursor:** specialists run as Cursor subagents from `.cursor/agents/`. Project
 hooks ask before every `git commit`, `git push`, `gh pr create`, and
 `gh release create`. They also block writes outside a concurrent delivery's
 claimed scope, and send one verification reminder before a dirty delivery
 worktree finishes. Details:
 [`docs/cursor-integration.md`](docs/cursor-integration.md).
 
+### Elephant-Goldfish Model (EGM)
+
+xq-squad vendors EGM 0.1.1 under `.egm/` (Apache 2.0; not an official Google
+product). Contracts use `EGM_ROOT` as the absolute path to that directory and
+still work when the Cursor plugin UI is not installed. For interactive slash
+commands, install the same package as a local Cursor plugin pointing at the
+repo's `.egm/` copy (see `.egm/docs/cursor.md`), reload Cursor, and confirm
+seven skills plus the EGM reviewers and rule.
+
+`.squad/egm.json` is consumer-owned:
+
+| Field | Meaning |
+| --- | --- |
+| `intake_policy: "block"` | After a completed Goldfish intake review, any blocker finding ends intake `BLOCKED`. |
+| `intake_policy: "warn"` | Record all findings (including blockers) and continue. |
+| `intake_policy: null` | Unset. Lead ends `BLOCKED` and asks you to choose. |
+
+Incomplete reviews and failures to create a fresh reviewer context always
+`BLOCKED`, regardless of policy. The Lead never runs EGM in its own session.
+
+Rollout starts with the PAN pilot (`xq-financial-app`), then other product
+repositories after fresh-context and loud-failure gates pass.
+
 Example prompts:
 
 ```text
-Add pagination to the /orders endpoint, page size 50.
-Fix the flaky checkout test and tell me what was wrong.
-Refactor the auth middleware to use the new token service.
+Deliver docs/designs/orders-pagination.md
+Implement the approved spec at docs/designs/checkout-flake-fix.md
 ```
 
 What happens on each request:
 
-1. **Intake and discovery**: the Lead sets acceptance criteria, reads
-   `.squad/README.md` and the relevant memory, and maps the affected files
+1. **Intake and discovery**: the Lead requires the approved spec, runs a
+   Goldfish intake review via `analyst` (or Lead-dispatched fresh Tasks),
+   reads `.squad/README.md` and the relevant memory, and maps the affected files
    (through the `analyst` subagent when subagents are available).
 2. **Planning and execution**: tasks are planned and delegated to specialists
    (`implementer`, `tester`) or done directly by the Lead.
@@ -498,7 +526,7 @@ tests protocol behavior only, not real runtime compatibility.
 Package a release locally (writes to `.releases/`):
 
 ```bash
-bash scripts/package-release.sh --version v2.0.0
+bash scripts/package-release.sh --version v2.1.0
 ```
 
 ## Releasing

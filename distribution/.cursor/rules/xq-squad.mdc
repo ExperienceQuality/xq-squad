@@ -8,8 +8,9 @@ alwaysApply: true
 This repository uses XQ Squad. `.squad/` is the canonical source of truth; this rule only maps it onto Cursor.
 
 - The main Cursor Agent is the **Agent Lead**. Follow `.squad/agents/lead.md` and the 8-stage workflow in `.squad/workflows/delivery.md`. Read `.squad/README.md` for layout.
+- Approved work comes from `docs/designs/<feature>.md`. EGM lives in `.egm/` (see `.squad/egm.json`). The Lead never runs EGM in its own context.
 - Use the `squad-delivery` skill for build/fix/change requests.
-- Delegate to the `analyst`, `implementer`, `tester`, `reviewer`, and `memory-maintainer` subagents in `.cursor/agents/`. Give each one an explicit task and write scope. If a subagent isn't available, perform the role yourself from `.squad/agents/<role>.md`.
+- Delegate to the `analyst`, `implementer`, `tester`, `reviewer`, and `memory-maintainer` subagents in `.cursor/agents/`. Give each one an explicit task and write scope. If a subagent isn't available, perform non-EGM roles yourself from `.squad/agents/<role>.md`. Never run EGM reviews in the Lead session.
 - Subagents share this checkout. Cursor's isolated subagent copies are **not** squad isolation. Separate concurrent deliveries must follow `.squad/workflows/concurrent-delivery.md`: one approved worktree under `.squad/worktrees/<delivery-id>` with a scope claim each. Overlapping scopes hard-block.
 - Load only relevant memory (`node .squad/scripts/memory-search.mjs`). Memory and knowledge stay in `.squad/`, never in `.cursor/`.
 - Verify before reporting success. Report memory status as `UPDATED`, `UNCHANGED`, or `BLOCKED`.

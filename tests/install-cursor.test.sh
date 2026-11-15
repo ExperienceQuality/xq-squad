@@ -15,7 +15,7 @@ bash "$REPO_ROOT/scripts/package-release.sh" --version v1.4.0 --output "$REL" >/
 bash "$REPO_ROOT/scripts/package-release.sh" --version v1.4.0 --output "$TMP_BASE/again" >/dev/null
 cmp -s "$REL/squad-v1.4.0.tar.gz.sha256" "$TMP_BASE/again/squad-v1.4.0.tar.gz.sha256" || fail "packaging is not deterministic"
 LISTING="$(tar -tzf "$REL/squad-v1.4.0.tar.gz")"
-for f in .cursor/rules/xq-squad.mdc .cursor/hooks.json .cursor/agents/tester.md .cursor/skills/squad-delivery/SKILL.md .cursor/hooks/xq-squad-git-guard.mjs .squad/retired.json; do
+for f in .cursor/rules/xq-squad.mdc .cursor/hooks.json .cursor/agents/tester.md .cursor/skills/squad-delivery/SKILL.md .cursor/hooks/xq-squad-git-guard.mjs .squad/retired.json .squad/egm.json .egm/LICENSE .egm/skills/egm-review/SKILL.md; do
   printf '%s\n' "$LISTING" | grep -qx "$f" || fail "archive missing $f"
 done
 printf '%s\n' "$LISTING" | grep -q '^\.devin/' && fail "archive ships .devin/"

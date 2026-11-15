@@ -28,12 +28,19 @@ if ! grep -q 'XQ_SQUAD_MANAGED_START version:v1.0.0' "$CONSUMER/AGENTS.md"; then
 fi
 
 # Verify key files
-for f in AGENTS.md .squad/squad.json .cursor/agents/analyst.md .cursor/skills/squad-delivery/SKILL.md; do
+for f in AGENTS.md .squad/squad.json .squad/egm.json .egm/LICENSE .egm/NOTICE .egm/.egm-source-sha \
+  .egm/skills/egm-review/SKILL.md .egm/skills/egm-drift-report/SKILL.md \
+  .cursor/agents/analyst.md .cursor/skills/squad-delivery/SKILL.md; do
   if [[ ! -e "$CONSUMER/$f" ]]; then
     echo "Missing $f after install" >&2
     exit 1
   fi
 done
+# .egm/** recorded in install-state
+if ! node -e "const s=require('$CONSUMER/.squad/install-state.json'); if(!Object.keys(s.managed_files).some(k=>k.startsWith('.egm/'))) process.exit(1)"; then
+  echo ".egm/** not recorded in install-state.json" >&2
+  exit 1
+fi
 
 # Verify install state
 if [[ ! -f "$CONSUMER/.squad/install-state.json" ]]; then

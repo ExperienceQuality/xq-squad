@@ -26,6 +26,31 @@ Add your own hooks to `.cursor/hooks.json`. Upgrades only replace entries
 whose command is under `.cursor/hooks/xq-squad-`. Name your own rules,
 agents, skills, and hook scripts `local-*`.
 
+## Elephant-Goldfish Model (EGM)
+
+xq-squad vendors EGM under `.egm/`. Cursor does not auto-load that tree as a
+plugin. Two usage modes (also described in `.egm/docs/cursor.md`):
+
+1. **Interactive (preferred):** install the same package as a local Cursor
+   plugin pointing at the repository's `.egm/` copy, reload Cursor, and
+   confirm seven skills, the EGM reviewers, and the EGM rule.
+2. **Contract path (required):** set `EGM_ROOT` to the absolute path of
+   `.egm/`. If a slash command is not exposed, read
+   `.egm/skills/<name>/SKILL.md` and follow it. Contracts must work with this
+   path even when the plugin UI is not installed.
+
+Intake runs `egm-review` (`Step=implementation`) in a fresh `analyst`
+context (Goldfish). If nested reviewer subagents fail, the Lead
+direct-dispatches the three EGM personas as fresh Tasks with Goldfish-only
+context. If no fresh context can be created, the workflow ends `BLOCKED`.
+There is no same-context fallback; the Lead never runs EGM itself.
+
+Wrap-up runs `egm-drift-report` from `memory-maintainer` on `docs/designs/`
+(or `spec_dir`), writing under `.squad/egm-artifacts/`.
+
+EGM's own Cursor adapter is experimental and unverified. Pilot evidence is
+required before treating isolation as proven.
+
 ## Concurrency
 
 Cursor subagents share the parent checkout. Separate deliveries must use

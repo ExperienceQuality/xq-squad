@@ -28,7 +28,10 @@ cat "$REPO_ROOT/install.sh" | sh -s -- \
 
 for f in AGENTS.md \
          .squad/squad.json \
+         .squad/egm.json \
          .squad/install-state.json \
+         .egm/LICENSE \
+         .egm/skills/egm-review/SKILL.md \
          .cursor/skills/squad-delivery/SKILL.md \
          .squad/scripts/merge-agents.mjs; do
   if [[ ! -e "$CONSUMER/$f" ]]; then

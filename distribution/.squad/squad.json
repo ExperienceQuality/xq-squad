@@ -1,8 +1,8 @@
 {
   "$schema": "./schemas/squad-config.schema.json",
   "name": "xq-squad",
-  "version": "2.0.0",
-  "release_tag": "v2.0.0",
+  "version": "2.1.0",
+  "release_tag": "v2.1.0",
   "config_schema_version": "1.0.0",
   "memory_schema_version": "1.0.0",
   "repository": "https://github.com/ExperienceQuality/xq-squad",
@@ -22,31 +22,31 @@
       },
       "analyst": {
         "path": "agents/analyst.md",
-        "description": "Repository discovery and impact analysis.",
+        "description": "Repository discovery, impact analysis, and EGM Goldfish intake review.",
         "managed": true,
         "cursor_profile": "../.cursor/agents/analyst.md"
       },
       "implementer": {
         "path": "agents/implementer.md",
-        "description": "Assigned code changes following conventions.",
+        "description": "Implements the approved docs/designs spec following conventions.",
         "managed": true,
         "cursor_profile": "../.cursor/agents/implementer.md"
       },
       "tester": {
         "path": "agents/tester.md",
-        "description": "Relevant checks and test execution.",
+        "description": "Derives cases from the spec test plan and runs checks.",
         "managed": true,
         "cursor_profile": "../.cursor/agents/tester.md"
       },
       "reviewer": {
         "path": "agents/reviewer.md",
-        "description": "Change review and risk identification.",
+        "description": "Reviews the diff against the approved spec and test plan.",
         "managed": true,
         "cursor_profile": "../.cursor/agents/reviewer.md"
       },
       "memory-maintainer": {
         "path": "agents/memory-maintainer.md",
-        "description": "Durable memory reconciliation and update.",
+        "description": "Durable memory reconciliation plus egm-drift-report.",
         "managed": true,
         "cursor_profile": "../.cursor/agents/memory-maintainer.md"
       }
@@ -98,6 +98,11 @@
       "delivery-session": {
         "path": "schemas/delivery-session.schema.json",
         "managed": true
+      },
+      "egm-config": {
+        "path": "schemas/egm-config.schema.json",
+        "description": "Consumer-owned EGM intake and artifact settings (.squad/egm.json).",
+        "managed": true
       }
     },
     "manifests": {
@@ -144,6 +149,7 @@
       ".squad/schemas/**",
       ".squad/scripts/**",
       ".squad/README.md",
+      ".egm/**",
       ".cursor/agents/**",
       ".cursor/skills/**",
       ".cursor/rules/xq-squad*.mdc",
@@ -157,6 +163,8 @@
     ],
     "consumer_owned": [
       ".squad/MEMORY.md",
+      ".squad/egm.json",
+      ".squad/egm-artifacts/**",
       ".squad/knowledge/**",
       ".squad/memory/**",
       ".cursor/agents/local-*",

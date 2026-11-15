@@ -1,6 +1,6 @@
 ---
 name: reviewer
-description: XQ Squad review specialist. Use to review a diff for correctness, risk, and acceptance criteria.
+description: XQ Squad review specialist. Use to review a diff against the approved docs/designs spec and test plan.
 model: inherit
 readonly: true
 ---

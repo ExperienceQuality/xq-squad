@@ -80,6 +80,28 @@ test('canonical .squad contracts are runtime-neutral', async () => {
   }
 });
 
+test('EGM intake and wrap-up contracts are present', async () => {
+  const lead = await readFile(path.join(DIST, '.squad/agents/lead.md'), 'utf8');
+  assert.match(lead, /docs\/designs\/<feature>\.md/);
+  assert.match(lead, /intake_policy/);
+  assert.match(lead, /Never run `egm-review`/);
+  assert.match(lead, /directly as fresh Cursor Tasks/);
+  const analyst = await readFile(path.join(DIST, '.squad/agents/analyst.md'), 'utf8');
+  assert.match(analyst, /egm-review/);
+  assert.match(analyst, /Step=implementation/);
+  const tester = await readFile(path.join(DIST, '.squad/agents/tester.md'), 'utf8');
+  assert.match(tester, /test plan/);
+  assert.match(tester, /not run/);
+  const memory = await readFile(path.join(DIST, '.squad/agents/memory-maintainer.md'), 'utf8');
+  assert.match(memory, /egm-drift-report/);
+  assert.match(memory, /source/);
+  const rule = await readFile(path.join(DIST, '.cursor/rules/xq-squad.mdc'), 'utf8');
+  assert.match(rule, /\.egm\//);
+  assert.match(rule, /never runs EGM|Never run EGM/i);
+  assert.ok(existsSync(path.join(DIST, '.egm/skills/egm-review/SKILL.md')));
+  assert.ok(existsSync(path.join(DIST, '.egm/NOTICE')));
+});
+
 test('git guard asks for commit/push/PR/release and allows the rest', () => {
   for (const command of ['git commit -m x', 'git -C repo push origin main', 'gh pr create --fill', 'gh release create v1', 'cd a && git commit -am y']) {
     assert.equal(gitGuard.decide({ command }).permission, 'ask', command);

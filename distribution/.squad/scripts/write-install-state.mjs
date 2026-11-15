@@ -6,7 +6,7 @@ import { createInterface } from 'node:readline';
 import { createHash } from 'node:crypto';
 import { join, relative } from 'node:path';
 
-const MANAGED_PREFIXES = ['.squad/', '.cursor/'];
+const MANAGED_PREFIXES = ['.squad/', '.cursor/', '.egm/'];
 
 async function hashFile(path) {
   const hash = createHash('sha256');

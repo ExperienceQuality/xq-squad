@@ -1,0 +1,8 @@
+{
+  "$schema": "./schemas/egm-config.schema.json",
+  "egm_package_version": "0.1.1",
+  "egm_root": ".egm",
+  "spec_dir": "docs/designs",
+  "artifact_dir": ".squad/egm-artifacts",
+  "intake_policy": null
+}

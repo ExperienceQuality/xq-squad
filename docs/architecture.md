@@ -3,12 +3,16 @@
 ```text
 .squad/    canonical core — agents, workflows, schemas, scripts, memory, knowledge, state
 .cursor/   Cursor adapter — rules/*.mdc, agents/, skills/, hooks.json + hooks/
+.egm/      vendored third-party EGM Cursor package (Apache 2.0; not authored here)
 AGENTS.md  managed section: always-on Lead contract (read by the Cursor Agent)
 ```
 
 - **Core is the source of truth.** Role contracts (`.squad/agents/*.md`),
   the 8-stage delivery workflow, concurrent-delivery protocol, schemas,
   memory, and helper scripts are runtime-independent.
+- **`.egm/` is vendored third-party.** Skills and personas resolve against that
+  package root. Consumer EGM settings live in `.squad/egm.json` (consumer-owned).
+  Core contracts call EGM at intake and wrap-up; they do not rewrite EGM.
 - **Adapters are thin.** Each adapter file maps a core contract onto a native
   runtime feature and points to the canonical file instead of copying it.
   Cursor is the only supported runtime (decision D1, 2.0.0);
