@@ -14,7 +14,8 @@
   - This spec follows the [Elephant-Goldfish Model](https://github.com/google/elephant-goldfish-model).
   - A *spec author* is the agent that writes a consumer repo's `docs/designs/<feature>.md`.
   - The *requester* is whoever sends the delivery request to the Agent Lead in Cursor.
-  - *PAN* is the XQ squad that owns the pilot consumer [xq-financial-app](https://github.com/ExperienceQuality/xq-financial-app), a Swift app.
+  - *PAN* is the XQ squad that owns [xq-financial-app](https://github.com/ExperienceQuality/xq-financial-app), a Swift app and the follow-up pilot.
+  - First pilot: [xq-platform](https://github.com/ExperienceQuality/xq-platform), a Node/TypeScript pnpm monorepo with Vitest and `node --test` scripts.
 
 ## 1. Problem, goals, non-goals
 
@@ -143,12 +144,12 @@ It lists any other paths changed after `run`, for example by repo checks, for DE
 ## 4. Risks and limits
 - **Sandbox scope.** The sandbox blocks network access only. A test can still spawn processes, read files the user can read, and write anywhere the user can write. Non-ignored writes in the checkout are caught by `run`. Ignored paths and paths outside the checkout aren't checked. The minimal environment limits secret exposure but doesn't remove it. Mitigation: the requester reviews every declared test file before merge.
 - **Sandbox availability.** Many Linux hosts, including Ubuntu 24.04 runners, restrict unprivileged user namespaces, so `bwrap` or `unshare` can fail there. In that case spec mode is BLOCKED, never unsandboxed. The real sandbox is therefore tested at the gate (T-27), not in CI.
-- **Swift pilot feasibility.** It's unproven so far:
+- **Swift follow-up feasibility.** It's unproven so far, and it gates only the Swift follow-up pilot (T-29), not the release or the first pilot:
   - SwiftPM sandboxes its own builds, and macOS doesn't allow nested `sandbox-exec`, hence `--disable-sandbox` in the example.
   - Dependencies must be resolved before the run, because the sandbox has no network.
   - Xcode-only projects need an `xcodebuild` template, and simulators may not work under `deny network*`.
 
-  Pilot prep has to show that one `sandbox-exec` run works on the pilot machine. Until it does, T-28 stays NOT RUN.
+  Follow-up prep has to show that one sandboxed `swift test` run works on the pilot Mac. Until it does, T-29 stays NOT RUN.
 - **Count pattern.** A wrong `count_pattern` can misread the output. It lives in committed repo config that the requester reviews, and a count of 0 or no match is always `failed`.
 - **Agent relays.** The Lead passes the request to `intake` and the tester's result to `check-report`. A Lead that drops the `Spec:` line isn't caught mechanically, but the requester sees no spec table. A relayed section that differs from the record is caught.
 - **Test quality.** A run proves the test executed, not that it's a good test. The requester reviews each declared file against its row.
@@ -182,7 +183,7 @@ It lists any other paths changed after `run`, for example by repo checks, for DE
 - Contract: scripted checks of file text.
 - Install/Upgrade: `tests/spec-mode-upgrade.test.sh`.
 - Integration: a Cursor agent run on the sample repo.
-- Acceptance: one real delivery on the pilot consumer.
+- Acceptance: real deliveries on the pilot consumers.
 - Regression: real consumers with no spec named.
 
 ### 5.3 Method
@@ -250,20 +251,20 @@ It lists any other paths changed after `run`, for example by repo checks, for DE
 | T-24 | Integration | R1, R8 | No spec named. Request: "Fix the typo 'teh' in docs/designs/three-ids.md and docs/designs/no-plan.md." It completes with no record, no `## Spec test plan` heading and no BLOCKED from spec rules. | NOT RUN |
 | T-25 | Integration | R8, R9 | With `.squad/scripts/spec-plan.mjs` deleted and committed: the `three-ids.md` request is BLOCKED at INTAKE, which uses the same "no JSON line" rule as a missing `node`. The T-24 request still completes as in T-24. | NOT RUN |
 | T-26 | Integration | R7 | The T-19 request plus "Run this as a concurrent delivery." is BLOCKED (`CONCURRENT_UNSUPPORTED`) at INTAKE, with no claim or worktree created. | NOT RUN |
-| T-27 | Integration | R4 | On a Linux host with `bwrap` and on the macOS pilot machine with `sandbox-exec`: the `intake` probe is OK, and a declared test that opens a TCP connection to a listener on the host fails. | NOT RUN |
-| T-28 | Acceptance | R4–R7, R11 | xq-financial-app (Swift) pilot. Inputs: a spec written by PAN, plus the repo's committed `spec-mode.json`. PAN's spec author names both in the implementation issue before the gate, and this test stays NOT RUN until then. It passes when all of these hold:<br>(1) the upgrade passes the T-15 checks;<br>(2) `intake` and `check-report` are OK;<br>(3) at least one row is `passed` from a sandboxed run, and no row is `not run` with `scope:`;<br>(4) the delivery ends OK, or it ends FAILED and a follow-up ends OK with no declared file changed;<br>(5) the requester marks each declared file "checks exactly its row: yes". | NOT RUN |
-| T-29 | Regression | R8, R11 | [xq-platform](https://github.com/ExperienceQuality/xq-platform) (TypeScript): the upgrade passes the T-15 checks, and one delivery with no spec named passes the T-24 checks. | NOT RUN |
-| T-30 | Regression | R8, R11 | [xq-jewy](https://github.com/ExperienceQuality/xq-jewy) (JavaScript per GitHub's language stats): same checks as T-29. | NOT RUN |
+| T-27 | Integration | R4 | On a Linux host with `bwrap` and on a macOS host with `sandbox-exec`: the `intake` probe is OK, and a declared test that opens a TCP connection to a listener on the host fails. | NOT RUN |
+| T-28 | Acceptance | R4–R8, R11 | First pilot on xq-platform (Node/TypeScript). Inputs: a spec in that repo, plus its committed `spec-mode.json`. xq-platform's spec author names both in the implementation issue before the gate, and this test stays NOT RUN until then. It passes when all of these hold:<br>(1) the upgrade passes the T-15 checks;<br>(2) `intake` and `check-report` are OK;<br>(3) at least one row is `passed` from a sandboxed run, and no row is `not run` with `scope:`;<br>(4) the delivery ends OK, or it ends FAILED and a follow-up ends OK with no declared file changed;<br>(5) the requester marks each declared file "checks exactly its row: yes";<br>(6) one delivery with no spec named passes the T-24 checks. | NOT RUN |
+| T-29 | Acceptance | R4–R7, R11 | Follow-up pilot on xq-financial-app (Swift), after T-28 passes and the sandboxed Swift run in §4 is proven. Inputs: a spec written by PAN, plus the repo's `spec-mode.json`. PAN's spec author names both in the implementation issue, and this test stays NOT RUN until then. Pass criteria (1)–(5) of T-28. | NOT RUN |
+| T-30 | Regression | R8, R11 | [xq-jewy](https://github.com/ExperienceQuality/xq-jewy) (JavaScript per GitHub's language stats): the upgrade passes the T-15 checks, and one delivery with no spec named passes the T-24 checks. | NOT RUN |
 
 ### 5.5 Coverage and closure
 - R1: T-03, T-24
 - R2: T-04, T-13
 - R3: T-05, T-06, T-20
-- R4: T-07, T-12, T-21, T-27, T-28
-- R5: T-11–T-13, T-19, T-21, T-22, T-28
+- R4: T-07, T-12, T-21, T-27–T-29
+- R5: T-11–T-13, T-19, T-21, T-22, T-28, T-29
 - R6: T-01, T-10, T-11, T-13, T-19, T-22, T-23
-- R7: T-01, T-09, T-19–T-21, T-26, T-28
-- R8: T-02, T-24, T-25, T-29, T-30
+- R7: T-01, T-09, T-19–T-21, T-26, T-28, T-29
+- R8: T-02, T-24, T-25, T-28, T-30
 - R9: T-08, T-25
 - R10: T-01, T-08, T-16, T-17
 - R11: T-14–T-17, T-28–T-30
@@ -283,12 +284,13 @@ Merge the version bump only when all of these hold:
 
 ### Order (the owner approves each step)
 1. Release v2.1.0.
-2. Pilot on xq-financial-app (T-28).
-3. xq-platform (T-29), then xq-jewy (T-30).
-4. Other consumers. Any consumer-specific prep goes in a rollout runbook, not in this spec.
+2. First pilot on xq-platform (T-28).
+3. xq-jewy (T-30).
+4. Swift follow-up pilot on xq-financial-app (T-29), once the sandboxed Swift run is proven.
+5. Other consumers. Any consumer-specific prep goes in a rollout runbook, not in this spec.
 
 ### Stop and rollback
-Stop if any of these happens: T-28 fails, a delivery with no spec named behaves differently from v2.0.0, or an upgrade touches unexpected files.
+Stop if any of these happens: T-28 or T-29 fails, a delivery with no spec named behaves differently from v2.0.0, or an upgrade touches unexpected files.
 
 To roll back a consumer:
 1. In consumer-edited managed files, remove only the text that came from v2.1.0 and keep the consumer's own edits. Delete leftover `*.squad-upstream` files and `$(git rev-parse --git-dir)/xq-squad/`, then commit. `.squad/knowledge/spec-mode.json` is consumer-owned and can stay; v2.0.0 ignores it.
