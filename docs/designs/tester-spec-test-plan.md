@@ -1,11 +1,11 @@
 # Tester uses the spec's test plan
 
-- Status: Approved (David Châu, 2026-11-17)
+- Status: Approved (David Châu, 2026-11-17) (retargeted to v2.2.0 on 2026-11-17, pending David's merge)
 - Owner and approver: David Châu
-- Target: xq-squad v2.1.0 (minor, backward compatible)
+- Target: xq-squad v2.2.0 (minor, backward compatible)
 - Repo: https://github.com/ExperienceQuality/xq-squad
-- Baseline: v2.0.0 (`37acdfb`). `git diff v2.0.0 8c622e7` touches only `README.md`, so line numbers refer to `main` at `8c622e7`.
-- Cited source files (all at `8c622e7`):
+- Baseline: v2.1.0 (`842e72d`), the latest release, which follows v2.0.0 (`37acdfb`). `git diff v2.0.0 v2.1.0` only adds the `caveman` skill (`distribution/.cursor/skills/caveman/SKILL.md`, registered in `distribution/.squad/squad.json` `components.skills` and listed in `distribution/.squad/README.md`), bumps the version pins, and edits `CHANGELOG.md`, `README.md`, `docs/cursor-integration.md` and `tests/upgrade.test.sh`. It changes no contract file, script, hook, workflow or test fixture, so "v2.0.0 behavior" in this spec is also v2.1.0 behavior. Consumers upgrade to v2.2.0 from either release. Line numbers refer to `main` at `842e72d` (the v2.1.0 tag).
+- Cited source files (all at `842e72d`):
   - Agents and adapter: `distribution/.squad/agents/tester.md`, `lead.md`; `distribution/.cursor/agents/tester.md`; `distribution/.cursor/skills/squad-delivery/SKILL.md`; `distribution/.squad/workflows/delivery.md`.
   - Distribution files: `distribution/.squad/README.md`, `distribution/.squad/squad.json`, `distribution/AGENTS.md`.
   - Scripts: `distribution/.squad/scripts/upgrade-managed.mjs`, `merge-agents.mjs`, `delivery-verify.mjs`; `install.sh`; `update.sh`; `scripts/package-release.sh`, `validate.sh`, `validate-cursor-adapter.mjs`.
@@ -40,9 +40,9 @@ The xq-squad tester picks the checks it thinks are relevant (`.squad/agents/test
 - xq-squad implements and executes plan rows. It never adds, removes or reinterprets cases. Writing a test file that checks exactly what one row says is implementation of that row.
 - No spec review or drafting inside xq-squad. The spec is read-only input.
 - No automatic spec lookup, no vendored EGM, and no changes to the analyst, implementer, reviewer or memory-maintainer contracts.
-- No spec mode in concurrent deliveries (`.squad/workflows/concurrent-delivery.md`) in v2.1.0.
+- No spec mode in concurrent deliveries (`.squad/workflows/concurrent-delivery.md`) in v2.2.0.
 - No stronger isolation for test runs than v2.0.0 repo checks have, apart from blocking network other than loopback (§4).
-- Upgrades are supported from v2.0.0 only.
+- Upgrades are supported from v2.0.0 and v2.1.0 only.
 
 ## 2. Design
 
@@ -67,7 +67,7 @@ The xq-squad tester picks the checks it thinks are relevant (`.squad/agents/test
 - Spec mode is serial-only. A request is treated as concurrent when any request line, after the same trim as the trigger, contains the phrase `concurrent delivery` in any letter case, or when the checkout is under `.squad/worktrees/`. Either case is BLOCKED at INTAKE.
 
 ### 2.3 How tests run
-- The consumer repo commits `.squad/knowledge/spec-mode.json`. That path is consumer-owned (`squad.json` `ownership.consumer_owned`, line 160), so upgrades never touch it. The command, output pattern and sandbox never come from the spec or the request.
+- The consumer repo commits `.squad/knowledge/spec-mode.json`. That path is consumer-owned (`squad.json` `ownership.consumer_owned`, line 165), so upgrades never touch it. The command, output pattern and sandbox never come from the spec or the request.
 - The config lists one or more *runners*. Each has a path glob, a working directory, a command template and a pattern that reads the number of tests that actually ran and passed, not the runner's total (skipped and todo tests don't count). A declared file uses the first runner whose glob matches it; if none matches, `run` is BLOCKED. This covers repos that mix runners, such as xq-platform's Vitest and `node --test` (examples in §7.6).
 - Each automated row runs once, on its own file, with no shell and a small fixed environment. A row is `passed` only on exit 0 with that passed count at least 1; anything else, including a timeout or a file whose only tests are skipped or todo, is `failed` with the reason. Evidence is the command, exit code, count, duration and the path of the saved output log, which `clear` doesn't delete (§7.1.9).
 - Each run has its own timeout, and the whole `run` has a total time limit. Past the total limit `run` stops BLOCKED. A row's timeout is the smaller of its own limit and the time left, and a run that times out is killed together with every process it started (§7.1.5, §7.1.8).
@@ -99,7 +99,7 @@ The xq-squad tester picks the checks it thinks are relevant (`.squad/agents/test
 - `update.sh` needs Node 22+ (lines 57–67). It replaces unmodified managed files and installs new ones.
 - If a file was edited by the consumer and also changed upstream, `update.sh` keeps the consumer file, writes a sidecar (`upgrade-managed.mjs` lines 243–247) and exits 1 (line 436). `install-state.json` still moves to the new version (lines 311–320).
 - `AGENTS.md` never conflicts. Its managed section is stripped and re-added on every update, even if the consumer removed it (`upgrade-managed.mjs` lines 325–331, `merge-agents.mjs` lines 39–50). So its new bullet, B-AGENTS in §7.4, reaches every upgraded consumer. The bullet tells the Lead to write the request to `.squad/spec-input/request.md` with its file-editing tool, run `node .squad/scripts/spec-plan.mjs intake --request-file .squad/spec-input/request.md`, and report BLOCKED if no JSON line is printed.
-- Mixed versions: `intake` is BLOCKED (`MIXED_VERSIONS`), naming the files, when any contract file other than `.cursor/agents/tester.md` is missing, lacks `spec-plan.mjs` or has a sidecar; when `.cursor/agents/tester.md` exists and fails the same rule (it may be absent when subagents aren't used); or when `delivery-verify.mjs` lacks the new exports, fails to import, or it or one of its helper modules has a sidecar. `spec-plan.mjs` never imports `delivery-verify.mjs` statically, so an old copy gives this code and not a load failure (§7.1.7).
+- Mixed versions: `intake` is BLOCKED (`MIXED_VERSIONS`), naming the files, when any contract file other than `.cursor/agents/tester.md` is missing, lacks `spec-plan.mjs` or has a sidecar; when `.cursor/agents/tester.md` exists and fails the same rule (it may be absent when subagents aren't used); or when `delivery-verify.mjs` lacks the new exports, fails to import, or it or one of its helper modules has a sidecar. `spec-plan.mjs` never imports `delivery-verify.mjs` statically, so an old copy gives this code and not a load failure (§7.1.7). The rule is the same whichever release the consumer upgraded from: v2.0.0 and v2.1.0 ship identical contract files and `delivery-verify.mjs` helpers, so a stale file from either release lacks `spec-plan.mjs` or the new exports.
 - Node: `install.sh` works without Node (line 53). Without Node 22+, the script or a sandbox, a spec-mode request is BLOCKED at INTAKE. Requests without a `spec:` line are unaffected.
 
 ## 3. Alternatives considered
@@ -115,7 +115,7 @@ The xq-squad tester picks the checks it thinks are relevant (`.squad/agents/test
 | One `test_command` per repo | xq-platform mixes Vitest and `node --test` across packages, so a single command can't run every row. |
 | Fixed file name `<dir>/<spec>.<ID><suffix>` | It isn't valid for pytest modules, JVM classes or Swift. |
 | New snapshot code, or `verifyDeliveryWrites` as is | New code would duplicate `delivery-verify.mjs`. `verifyDeliveryWrites` needs an owned concurrent claim (`readOwnedClaim`, line 369), and serial deliveries have none. Instead, the file gains exports that don't need a claim (§7.2). |
-| Spec mode in concurrent deliveries | It needs claim extension partway through VERIFICATION, a two-step tester and worktree-only checks, none of which v2.1.0 tests. It's deferred to a later release. |
+| Spec mode in concurrent deliveries | It needs claim extension partway through VERIFICATION, a two-step tester and worktree-only checks, none of which v2.2.0 tests. It's deferred to a later release. |
 | Any `docs/designs/*.md` path, or automatic lookup, as the trigger | It changes v2.0.0 behavior for requests that only mention design docs, and it can pick a wrong spec. |
 | Hide the spec from the implementer | The spec is the design being built, so the request would have to restate it. The guarantee comes from the script running the tester's declared files, not from hiding the spec (§2.2). |
 | The Lead maps IDs to acceptance criteria and the tester stays unchanged | Merging or splitting IDs into criteria reinterprets cases. The Cursor tester can write (line 5) but is told not to edit source (line 12), so new tests would need a contract change anyway. |
@@ -127,7 +127,7 @@ The xq-squad tester picks the checks it thinks are relevant (`.squad/agents/test
 | Requester approval of declared files before `run` | It would pause every spec-mode VERIFICATION for a human, including the 36 gate sessions. The script stays unattended once the tester has declared the files, and the requester already reviews those files before merge (T-28 criterion 5). A gate the requester isn't watching wouldn't stop a bad test from running once. |
 
 ## 4. Risks and limits
-- **Security: network only.** The sandbox blocks network access other than loopback, and nothing else. A test can spawn processes, read anything the user can read, and write anywhere the user can write, inside or outside the checkout. That is the same exposure v2.0.0 already has: its tester runs repo checks such as `npm test`, and the implementer edits code those checks run, with no sandbox at all. What v2.1.0 adds is that the tester writes the code that runs, from a spec that might carry injected text, so the new risk is a malicious or confused test. Mitigations, honestly scoped:
+- **Security: network only.** The sandbox blocks network access other than loopback, and nothing else. A test can spawn processes, read anything the user can read, and write anywhere the user can write, inside or outside the checkout. That is the same exposure v2.0.0 already has: its tester runs repo checks such as `npm test`, and the implementer edits code those checks run, with no sandbox at all. What v2.2.0 adds is that the tester writes the code that runs, from a spec that might carry injected text, so the new risk is a malicious or confused test. Mitigations, honestly scoped:
   - At run time: no network other than loopback (no exfiltration or downloads to other machines; on macOS, host loopback services are reachable, §4 Sandbox loopback), a minimal environment (fewer secrets in env vars), the contract rule to treat spec text as data, and `run` blocking any non-ignored checkout change other than the new declared files. No environment variable, flag or config value skips the sandbox or the probe (§7.1.8, T-31).
   - In the agents' shells: requests, results and declarations travel only in input files written with the file-editing tool (§7.1.2). The only untrusted value on a command line is the spec path, limited to shell-safe characters (§7.5). So quoting slips or `$(…)` in a request, spec or test output never run in the Lead's or tester's shell.
   - Not at run time: the requester's review of each declared file before merge is post-hoc.
@@ -176,8 +176,8 @@ The xq-squad tester picks the checks it thinks are relevant (`.squad/agents/test
 - R8: Without a `spec:` line there is no script call, no record and no `## Spec test plan` heading, and the source contract files only gain lines.
 - R9: Spec mode without Node 22+ or without the script is BLOCKED.
 - R10: Mixed versions are BLOCKED, naming the files.
-- R11: A fresh install of v2.1.0 and an upgrade from v2.0.0 are clean.
-- R12: Rollback to v2.0.0 is clean and keeps the consumer's own edits.
+- R11: A fresh install of v2.2.0 and an upgrade from v2.0.0 or v2.1.0 are clean.
+- R12: Rollback to the release the consumer upgraded from (v2.0.0 or v2.1.0) is clean and keeps the consumer's own edits.
 
 ### 5.2 Levels
 - Unit: `node --test` with fixtures.
@@ -194,13 +194,14 @@ The xq-squad tester picks the checks it thinks are relevant (`.squad/agents/test
   - `tests/spec-mode-upgrade.test.sh` must be added to the shell list (lines 70–79).
   - CI therefore runs these tests only on the version-bump run. Every gate test also runs locally on the candidate commit.
   - If CI fails after the bump is merged, no tag is created (the tag step, lines 87–97, comes after the tests), and a fix-forward commit to `main` retries.
-- **Archives.** No network is used. `$REL` holds both archives:
-  - Candidate: `bash scripts/package-release.sh --version v2.1.0 --output "$REL"`.
+- **Archives.** No network is used. `$REL` holds three archives:
+  - Candidate: `bash scripts/package-release.sh --version v2.2.0 --output "$REL"`.
   - v2.0.0: the same command with `--version v2.0.0`, run from `git worktree add "$TMP/v200" v2.0.0`, so the content is exactly v2.0.0's.
+  - v2.1.0: the same command with `--version v2.1.0`, run from `git worktree add "$TMP/v210" v2.1.0`.
   - Every `install.sh` and `update.sh` call passes `--archive "$REL/squad-<v>.tar.gz" --checksum "$REL/squad-<v>.tar.gz.sha256"`, as `install_v`/`update_v` do in `tests/node-floor.test.sh` lines 32–33. Without both flags the scripts download from GitHub (`update.sh` lines 146–160, `install.sh` lines 107–121).
 - **Sample repo**, in this order:
   1. A temp git repo from `tests/fixtures/sample-consumer` (`AGENTS.md`, `package.json` with `npm test` = `node --test tests/*.test.mjs`, `src/greet.mjs`, `tests/greet.test.mjs`; no lockfile). Commit.
-  2. Install v2.0.0 with the archive flags. `install.sh` refuses a target that already has `.squad` (lines 98–101), so nothing is added under `.squad` before this.
+  2. Install v2.0.0 with the archive flags. `install.sh` refuses a target that already has `.squad` (lines 98–101), so nothing is added under `.squad` before this. T-15 and T-18 path C also build a *v2.1.0 sample* the same way, installing v2.1.0 in this step instead; every other test uses the v2.0.0 sample.
   3. Add `tests/fixtures/spec-mode/designs/*.md` to `docs/designs/` and the Node example (§7.6) as `.squad/knowledge/spec-mode.json`, with `sandbox` set for the host: `bwrap` on Linux, `sandbox-exec` on macOS. Commit.
   4. Upgrades run without `--yes`.
 - **Consumer edits.**
@@ -237,7 +238,7 @@ Unit test cases are listed in §7.7.
 | Test ID | Level | Covers | Check | Status |
 |---|---|---|---|---|
 | T-01 | Contract | R6, R7, R10 | `tests/tester-spec-mode.test.mjs` checks that each §7.4 block appears byte-exact after its anchor line (§7.7). | NOT RUN |
-| T-02 | Contract | R8 | Gate-only, from the runbook. `git diff v2.0.0 <candidate> --` on the six contract files under `distribution/` shows no removed or changed lines. | NOT RUN |
+| T-02 | Contract | R8 | Gate-only, from the runbook. `git diff v2.1.0 <candidate> --` on the six contract files under `distribution/` shows no removed or changed lines (the six files are identical at v2.0.0 and v2.1.0). | NOT RUN |
 | T-03 | Unit | R1 | Trigger cases (§7.7). | NOT RUN |
 | T-04 | Unit | R2 | Spec path and sha256 cases (§7.7). | NOT RUN |
 | T-05 | Unit | R3 | Plan rules 1–2 (§7.7). | NOT RUN |
@@ -249,11 +250,11 @@ Unit test cases are listed in §7.7.
 | T-11 | Unit | R5, R6 | `run` declaration checks (§7.7). | NOT RUN |
 | T-12 | Unit | R4, R5 | `run` results, time limits and the shipped Node example (§7.7). | NOT RUN |
 | T-13 | Unit | R2, R5, R6 | `check-report` (§7.7). | NOT RUN |
-| T-14 | Install | R11 | `tests/spec-mode-upgrade.test.sh`: a fresh install of the candidate with Node 22 and with no Node (as in `tests/node-floor.test.sh` lines 21–30) exits 0. `install-state.json` `version` is `2.1.0`, `squad.json` `version`/`release_tag` are `2.1.0`/`v2.1.0`, and `spec-plan.mjs` is present. | NOT RUN |
-| T-15 | Upgrade | R11 | Same script: the unedited v2.0.0 sample upgrades to the candidate with exit 0, the T-14 version checks, and no sidecars (including no `.cursor/hooks.json.squad-upstream`). `git status` lists nothing outside the six contract files, `spec-plan.mjs`, `delivery-verify.mjs`, `.squad/squad.json`, `.squad/README.md`, `.squad/install-state.json` and `.cursor/hooks.json` (which the hooks merge may rewrite, `upgrade-managed.mjs` lines 288–290). | NOT RUN |
+| T-14 | Install | R11 | `tests/spec-mode-upgrade.test.sh`: a fresh install of the candidate with Node 22 and with no Node (as in `tests/node-floor.test.sh` lines 21–30) exits 0. `install-state.json` `version` is `2.2.0`, `squad.json` `version`/`release_tag` are `2.2.0`/`v2.2.0`, and `spec-plan.mjs` is present. | NOT RUN |
+| T-15 | Upgrade | R11 | Same script, run once on the unedited v2.0.0 sample and once on the unedited v2.1.0 sample: each upgrades to the candidate with exit 0, the T-14 version checks, and no sidecars (including no `.cursor/hooks.json.squad-upstream`). `git status` lists nothing outside the six contract files, `spec-plan.mjs`, `delivery-verify.mjs`, `.squad/squad.json`, `.squad/README.md`, `.squad/install-state.json` and `.cursor/hooks.json` (which the hooks merge may rewrite, `upgrade-managed.mjs` lines 288–290), plus, on the v2.0.0 sample only, `.cursor/skills/caveman/SKILL.md`, the v2.1.0 skill the upgrade installs. | NOT RUN |
 | T-16 | Upgrade | R10, R11 | Same script, with the T-16 edit: exit 1, a `tester.md.squad-upstream` sidecar, and the T-14 version checks. `intake` with a spec request then gives `MIXED_VERSIONS`, naming that file. That check runs before the sandbox probe, so the result doesn't depend on the CI host. | NOT RUN |
 | T-17 | Upgrade | R10, R11 | Same script, with the T-17 edits: exit 1 and no `AGENTS.md` conflict. The managed section is back with the new bullet, and `intake` gives `MIXED_VERSIONS`, naming `lead.md`, as in T-16. | NOT RUN |
-| T-18 | Upgrade | R12 | Same script, on two samples, with the archive flags on every `install.sh` and `update.sh` call. `$REF` is the commit the rollback must return to.<br>• Path A, after T-15: `git add -A` and commit the upgrade. `$REF` is the §5.3 step-3 commit.<br>• Path B, after T-16: resolve the conflict with `cp .squad/agents/tester.md.squad-upstream .squad/agents/tester.md`, `printf 'Local note.\n' >> .squad/agents/tester.md` and `rm .squad/agents/tester.md.squad-upstream`, then `git add -A` and commit. `$REF` is the T-16 edit commit, the consumer's last commit before the upgrade.<br>• §6 rollback step 1, scripted: on path B, `git show "$REF":.squad/agents/tester.md > .squad/agents/tester.md`. On both paths, delete every `*.squad-upstream` file outside `.git/`, run `rm -rf "$(git rev-parse --git-dir)/xq-squad" "$(git rev-parse --git-dir)/xq-squad-logs" .squad/spec-input`, then `git add -A` and commit only if `git status --porcelain` isn't empty. Step 2: `update.sh --target <sample> --version v2.0.0 --allow-downgrade --remove-retired` with the archive flags.<br>• Pass, on both paths: `update.sh` exits 0; `install-state.json` `version` is `2.0.0`; `git diff --exit-code "$REF" -- . ':(exclude).squad/install-state.json'` passes, so every tracked file, including `AGENTS.md`, `.cursor/hooks.json` and `.squad/agents/tester.md`, equals `$REF` and `spec-plan.mjs` is gone; `git ls-files -o --exclude-standard` is empty; no `*.squad-upstream` file exists; `grep -rl spec-plan.mjs AGENTS.md .squad .cursor` is empty; `$(git rev-parse --git-dir)/xq-squad` and `$(git rev-parse --git-dir)/xq-squad-logs` are absent.<br>• Why this holds: the T-16 upgrade keeps `tester.md`'s v2.0.0 baseline hash (`upgrade-managed.mjs` lines 238–247, 300–302), so the downgrade sees an unchanged upstream and keeps the consumer's file; `AGENTS.md` and `.cursor/hooks.json` are re-merged from the v2.0.0 archive, and the hooks merge is byte-idempotent (checked on the box with a v2.0.0 install). | NOT RUN |
+| T-18 | Upgrade | R12 | Same script, on three samples, with the archive flags on every `install.sh` and `update.sh` call. `$REF` is the commit the rollback must return to.<br>• Path A, after T-15: `git add -A` and commit the upgrade. `$REF` is the §5.3 step-3 commit.<br>• Path B, after T-16: resolve the conflict with `cp .squad/agents/tester.md.squad-upstream .squad/agents/tester.md`, `printf 'Local note.\n' >> .squad/agents/tester.md` and `rm .squad/agents/tester.md.squad-upstream`, then `git add -A` and commit. `$REF` is the T-16 edit commit, the consumer's last commit before the upgrade.<br>• Path C, after T-15 on the v2.1.0 sample: `git add -A` and commit the upgrade. `$REF` is that sample's §5.3 step-3 commit.<br>• §6 rollback step 1, scripted: on path B, `git show "$REF":.squad/agents/tester.md > .squad/agents/tester.md`. On every path, delete every `*.squad-upstream` file outside `.git/`, run `rm -rf "$(git rev-parse --git-dir)/xq-squad" "$(git rev-parse --git-dir)/xq-squad-logs" .squad/spec-input`, then `git add -A` and commit only if `git status --porcelain` isn't empty. Step 2: `update.sh --target <sample> --version <base> --allow-downgrade --remove-retired` with the archive flags, where `<base>` is `v2.0.0` on paths A and B and `v2.1.0` on path C.<br>• Pass, on every path: `update.sh` exits 0; `install-state.json` `version` is `<base>` without the `v`; `git diff --exit-code "$REF" -- . ':(exclude).squad/install-state.json'` passes, so every tracked file, including `AGENTS.md`, `.cursor/hooks.json` and `.squad/agents/tester.md`, equals `$REF`, `spec-plan.mjs` is gone, and `.cursor/skills/caveman/SKILL.md` is absent on paths A and B and unchanged on path C; `git ls-files -o --exclude-standard` is empty; no `*.squad-upstream` file exists; `grep -rl spec-plan.mjs AGENTS.md .squad .cursor` is empty; `$(git rev-parse --git-dir)/xq-squad` and `$(git rev-parse --git-dir)/xq-squad-logs` are absent.<br>• Why this holds: the T-16 upgrade keeps `tester.md`'s v2.0.0 baseline hash (`upgrade-managed.mjs` lines 238–247, 300–302), so the downgrade sees an unchanged upstream and keeps the consumer's file; `AGENTS.md` and `.cursor/hooks.json` are re-merged from the `<base>` archive, and the hooks merge is byte-idempotent (checked on the box with a v2.0.0 install; `.cursor/hooks.json` is identical in v2.1.0). On paths A and B the downgrade removes the v2.1.0-only `caveman` skill the same way it removes `spec-plan.mjs` (checked on the box on 2026-11-17 with a v2.0.0 → v2.1.0 → v2.0.0 round trip, which left no diff from the v2.0.0 commit). | NOT RUN |
 | T-19 | Integration | R5–R7 | `three-ids.md`. G-1 and G-2 are `passed`, each from its own file with count ≥ 1, and G-3 is `not run` with `level:`. `check-report` is OK before MEMORY_UPDATE, and DELIVERY shows the table. Every log path cited in an Evidence cell exists in the git dir after the delivery. The final `git status` shows only the task's changes, the two declared files, and memory files under `.squad/`. | NOT RUN |
 | T-20 | Integration | R3, R7 | `no-plan.md`: BLOCKED at INTAKE with `PLAN_RULE_1`, and `git status` is clean. | NOT RUN |
 | T-21 | Integration | R4, R5, R7 | `failing.md`. G-1 is `failed` from the script run, and the workflow ends `FAILED` at VERIFICATION. There's no memory update, HEAD is unchanged, and the final message shows the row. | NOT RUN |
@@ -289,26 +290,26 @@ Every test maps back to a requirement. The implementation issue in xq-squad, ope
 ### Release gate
 Merge the version bump only when all of these hold:
 - T-01 to T-27 and T-31 are `passed` with evidence on the candidate commit (the phase 6 head, §7.8).
-- T-27 is `passed` on both a Linux host with `bwrap` and a macOS host with `sandbox-exec`, because v2.1.0 ships both wrappers. The Linux run uses the gate host. The macOS run may be on a GitHub-hosted macOS runner (for example `macos-latest`, run manually or via `workflow_dispatch`, not as PR CI) or on David's Mac mini. The T-27 evidence records which host was used; until both runs pass, the gate isn't met.
+- T-27 is `passed` on both a Linux host with `bwrap` and a macOS host with `sandbox-exec`, because v2.2.0 ships both wrappers. The Linux run uses the gate host. The macOS run may be on a GitHub-hosted macOS runner (for example `macos-latest`, run manually or via `workflow_dispatch`, not as PR CI) or on David's Mac mini. The T-27 evidence records which host was used; until both runs pass, the gate isn't met.
 - `scripts/validate.sh` passes.
 - The existing tests pass locally.
 
-`release.yml` then tags v2.1.0.
+`release.yml` then tags v2.2.0.
 
 ### Order (the owner approves each step)
-1. Release v2.1.0.
+1. Release v2.2.0.
 2. First pilot on xq-platform (T-28).
 3. xq-jewy (T-30).
 4. Swift follow-up pilot on xq-financial-app (T-29), once the sandboxed Swift run is proven.
 5. Other consumers. Any consumer-specific prep goes in a rollout runbook, not in this spec.
 
 ### Stop and rollback
-Stop if any of these happens: T-28 or T-29 fails, a delivery with no spec named behaves differently from v2.0.0, or an upgrade touches unexpected files.
+Stop if any of these happens: T-28 or T-29 fails, a delivery with no spec named behaves differently from v2.0.0 and v2.1.0, or an upgrade touches unexpected files.
 
 To roll back a consumer:
-1. In consumer-edited managed files, remove only the text that came from v2.1.0 and keep the consumer's own edits. When the consumer made no edits to a file after the upgrade, that is the file at the consumer's last commit before the upgrade: `git show <commit>:<file> > <file>`, as T-18 does. Delete leftover sidecars, `$(git rev-parse --git-dir)/xq-squad/`, `$(git rev-parse --git-dir)/xq-squad-logs/` and `.squad/spec-input/`, then commit if anything changed. `.squad/knowledge/spec-mode.json` is consumer-owned and can stay; v2.0.0 ignores it.
-2. Run `update.sh --target <repo> --version v2.0.0 --allow-downgrade --remove-retired`. On a real consumer this downloads the published v2.0.0 release; offline, and in T-18, add `--archive` and `--checksum` (§5.3). The downgrade guard is at `update.sh` lines 111–113.
-3. Verify as in T-18, against the v2.0.0 archive. Don't verify against `install-state.json`, because the downgrade rewrites it.
+1. In consumer-edited managed files, remove only the text that came from v2.2.0 and keep the consumer's own edits. When the consumer made no edits to a file after the upgrade, that is the file at the consumer's last commit before the upgrade: `git show <commit>:<file> > <file>`, as T-18 does. Delete leftover sidecars, `$(git rev-parse --git-dir)/xq-squad/`, `$(git rev-parse --git-dir)/xq-squad-logs/` and `.squad/spec-input/`, then commit if anything changed. `.squad/knowledge/spec-mode.json` is consumer-owned and can stay; v2.0.0 and v2.1.0 ignore it.
+2. Run `update.sh --target <repo> --version <previous> --allow-downgrade --remove-retired`, where `<previous>` is the release the consumer upgraded from: `release_tag` in `.squad/squad.json` at the consumer's last commit before the upgrade (`v2.0.0` or `v2.1.0`). On a real consumer this downloads that published release; offline, and in T-18, add `--archive` and `--checksum` (§5.3). The downgrade guard is at `update.sh` lines 111–113.
+3. Verify as in T-18, against the `<previous>` archive. Don't verify against `install-state.json`, because the downgrade rewrites it.
 
 ## 7. Implementation Plan
 
@@ -639,7 +640,7 @@ Fenced code blocks are ignored, and only ATX headings (`#` to `####`) count.
 5. IDs are unique, compared case-insensitively.
 
 ### 7.4 Contract file edits (additive, under `distribution/`)
-Each edit inserts a block directly after an anchor line, which is quoted from the file at `8c622e7`. No existing line changes. The blocks below are normative and byte-exact, with LF line endings and no trailing spaces. T-01 hard-codes them. Four shared Lead bullets are defined once and inserted into three files.
+Each edit inserts a block directly after an anchor line, which is quoted from the file at `842e72d`. No existing line changes. The blocks below are normative and byte-exact, with LF line endings and no trailing spaces. T-01 hard-codes them. Four shared Lead bullets are defined once and inserted into three files.
 
 B-INTAKE:
 ```markdown
@@ -663,7 +664,7 @@ B-DELIVERY:
 
 Each shared bullet is a single line. In `SKILL.md` it is inserted with three leading spaces, so it nests under the numbered step like the existing sub-bullets.
 
-| File | Anchor line (line at `8c622e7`) | Inserted block |
+| File | Anchor line (line at `842e72d`) | Inserted block |
 |---|---|---|
 | `.squad/agents/lead.md` | 15 `- Ask for clarification only when missing information prevents safe execution.` | B-INTAKE |
 | `.squad/agents/lead.md` | 39 `- Execute directly when delegation is unavailable.` | B-EXEC |
@@ -737,10 +738,10 @@ The implementation PRs (§7.8) change exactly these repository-relative paths an
 | `tests/fixtures/spec-mode/requests/T-19.txt` to `T-26.txt` (new, eight files) | §5.3 requests. | 5 |
 | `tests/spec-mode/RUNBOOK.md` (new) | The steps and evidence lists for T-02, T-19 to T-26 (§5.3 runs and reset rules) and T-27. | 5 |
 | `tests/spec-mode/sandbox-check.mjs` (new) | T-27. It is not a `*.test.mjs` file, so CI doesn't run it. | 5 |
-| `distribution/.squad/README.md` | Phase 5: the "How to use" item and the diagram line below. Phase 6: every `v2.0.0` becomes `v2.1.0` (lines 6 and 37). | 5, 6 |
-| `CHANGELOG.md` | Phase 5: the `[Unreleased]` entry below. Phase 6: its heading becomes `## [2.1.0] - <date>`, where `<date>` is `git log -1 --format=%cs` of the phase 6 head. | 5, 6 |
-| `distribution/.squad/squad.json` | `version` `2.1.0`, `release_tag` `v2.1.0`. | 6 |
-| `README.md` | Every `v2.0.0` becomes `v2.1.0`. | 6 |
+| `distribution/.squad/README.md` | Phase 5: the "How to use" item and the diagram line below. Phase 6: every `v2.1.0` becomes `v2.2.0` (lines 6 and 38). | 5, 6 |
+| `CHANGELOG.md` | Phase 5: the `[Unreleased]` entry below. Phase 6: its heading becomes `## [2.2.0] - <date>`, where `<date>` is `git log -1 --format=%cs` of the phase 6 head. | 5, 6 |
+| `distribution/.squad/squad.json` | `version` `2.2.0`, `release_tag` `v2.2.0` (lines 4–5). Everything else, including the v2.1.0 `caveman` entry under `components.skills`, stays unchanged. | 6 |
+| `README.md` | Every `v2.1.0` becomes `v2.2.0`. | 6 |
 | `tests/spec-mode-upgrade.test.sh` (new) | T-14 to T-18. | 6 |
 | `.github/workflows/release.yml` | After line 79 (`bash tests/node-floor.test.sh`), the line `bash tests/spec-mode-upgrade.test.sh` with the same indent. | 6 |
 
@@ -749,15 +750,15 @@ In the table, `\|` is a literal `|` (GFM table escaping); the `validate.sh` line
 `scripts/validate.sh` (lines 162–174) fails when any `vX.Y.Z` in either README differs from `release_tag`, so the phase 5 text below names no version, and phase 6 changes every pin in the same commit as `squad.json`.
 
 `distribution/.squad/README.md`, phase 5:
-- After line 42, a new item:
+- After line 43 (item 6, `6. Upgrade with …`), a new item:
 
 ```markdown
 7. To have the tester follow a spec's test plan, add a line `Spec: <path to the spec .md>` to the request. The repository must commit `.squad/knowledge/spec-mode.json` and have Node.js 22 or newer and `bwrap` (Linux) or `sandbox-exec` (macOS). Requests without a `Spec:` line work as before.
 ```
 
-- After line 174 (`    INTAKE --> BLOCKED`), the line `    VERIFICATION --> BLOCKED`.
+- After line 180 (`    INTAKE --> BLOCKED`), the line `    VERIFICATION --> BLOCKED`.
 
-`CHANGELOG.md`, phase 5: after line 2 (the blank line after `# Changelog`), insert this block followed by one blank line:
+`CHANGELOG.md`, phase 5: after line 2 (the blank line after `# Changelog`, before `## [2.1.0] - 2026-11-15`), insert this block followed by one blank line:
 
 ```markdown
 ## [Unreleased]
@@ -876,7 +877,7 @@ Unit temp repo. Each case gets its own temp directory: `git init`, copy every fi
   - `deps.nodeVersion: 'v20.11.0'` gives `NODE_TOO_OLD`.
   - `MIXED_VERSIONS`, naming the file, for each required contract file that is missing, lacks `spec-plan.mjs` or has a sidecar.
   - `MIXED_VERSIONS` for `delivery-verify.mjs` in three cases. In each, a JSON line is printed and the exit code is 2:
-    - a root whose `delivery-verify.mjs` is the v2.0.0 file (the text check fails);
+    - a root whose `delivery-verify.mjs` is the v2.0.0 file, which is identical in v2.1.0 (the text check fails);
     - a root whose `delivery-verify.mjs` has the new exports but whose `delivery-scope.mjs` is deleted (the dynamic import throws);
     - a `delivery-worktree.mjs.squad-upstream` sidecar.
   - A missing `.cursor/agents/tester.md` is OK.
@@ -951,6 +952,6 @@ The work lands as six PRs, in this order. Each PR keeps the repo releasable: it 
 | 3 | `run` and `check-report`, the section, the record's `run` | T-11, T-12, T-13 and all of T-31 pass |
 | 4 | The §7.4 contract edits | T-01 passes; T-02's diff shows only added lines |
 | 5 | The 14 `tests/fixtures/spec-mode/` files, `tests/spec-mode/RUNBOOK.md`, `tests/spec-mode/sandbox-check.mjs`, the `.squad/README.md` "How to use" item and diagram line, and the `CHANGELOG.md` `[Unreleased]` entry (§7.4 files changed) | All earlier tests still pass; `validate.sh` passes |
-| 6 | The candidate: `squad.json` version bump, README pins, the `CHANGELOG.md` heading, `tests/spec-mode-upgrade.test.sh` and its `release.yml` line | The §6 gate on this PR's head commit, including T-27 `passed` on Linux and on macOS (a GitHub-hosted macOS runner or David's Mac mini); merging it releases v2.1.0 |
+| 6 | The candidate: `squad.json` version bump, README pins, the `CHANGELOG.md` heading, `tests/spec-mode-upgrade.test.sh` and its `release.yml` line | The §6 gate on this PR's head commit, including T-27 `passed` on Linux and on macOS (a GitHub-hosted macOS runner or David's Mac mini); merging it releases v2.2.0 |
 
 Phase 6 is the only PR that changes `version` or `release_tag`, because merging a new `release_tag` to `main` publishes a release (`release.yml` lines 3–12, 47–58). T-14 to T-18 need the bumped version, so they are written in phase 6.
