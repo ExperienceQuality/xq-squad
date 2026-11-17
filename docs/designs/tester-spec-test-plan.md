@@ -1,6 +1,6 @@
 # Tester uses the spec's test plan
 
-- Status: Draft
+- Status: Approved (David Châu, 2026-11-17)
 - Owner and approver: David Châu
 - Target: xq-squad v2.1.0 (minor, backward compatible)
 - Repo: https://github.com/ExperienceQuality/xq-squad
