@@ -4,6 +4,7 @@ Install a versioned agent squad into a GitHub repository so the Cursor Agent run
 
 Current release: **v2.1.0** — see [CHANGELOG.md](CHANGELOG.md) and
 [GitHub Releases](https://github.com/ExperienceQuality/xq-squad/releases).
+Fleet rollout (canary then waves): [`docs/v2.1.0-consumer-rollout-plan.md`](docs/v2.1.0-consumer-rollout-plan.md) ([#28](https://github.com/ExperienceQuality/xq-squad/issues/28)).
 
 ## What it is and who it's for
 
