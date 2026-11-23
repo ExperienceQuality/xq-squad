@@ -1,4 +1,4 @@
-# CI on every pull request and every push to main (#26).
+# CI on every pull request and every push to main.
 # Always runs validate + the full test suite. Does not publish releases.
 name: CI
 
