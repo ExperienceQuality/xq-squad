@@ -76,6 +76,8 @@ Attach a short report to the protocol PR or release PR:
 
 Keep logs small; redact secrets. One successful run of this procedure satisfies the “run once” bar for the current protocol shape; re-run when the protocol surface changes again.
 
+**Evidence (2026-11-23, Asia/Saigon):** first successful Cursor two-session run — [`docs/two-session-concurrent-delivery-check-report-2026-11-23.md`](two-session-concurrent-delivery-check-report-2026-11-23.md) (**pass**).
+
 ## Related
 
 - Fixture: `tests/concurrent-delivery.test.sh`
