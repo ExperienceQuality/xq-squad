@@ -473,7 +473,7 @@ xq-squad/
 ├── tests/                   # Node and shell tests, fixtures
 ├── docs/                    # Architecture, Cursor integration, compatibility reports, concurrent-delivery spec and notes
 ├── tasks/                   # Planning notes
-├── .github/workflows/       # release.yml
+├── .github/workflows/       # ci.yml, release.yml
 ├── README.md
 ├── CHANGELOG.md
 └── CONTRIBUTING.md
@@ -516,23 +516,30 @@ bash scripts/package-release.sh --version v2.1.0
 
 ## Releasing
 
-The `release` workflow ([`.github/workflows/release.yml`](.github/workflows/release.yml))
-runs on every push to `main` and on manual `workflow_dispatch` (with an
-optional `version` input; it defaults to `release_tag` in
-`distribution/.squad/squad.json`).
+**CI** ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs
+`scripts/validate.sh` and the full test suite on every pull request and every
+push to `main`.
 
-1. It resolves the version and skips everything if that tag or GitHub
-   Release already exists. Merging a change without a version bump publishes
+The **Release** workflow ([`.github/workflows/release.yml`](.github/workflows/release.yml))
+runs on every push to `main` and on manual `workflow_dispatch` (optional
+`version` input; defaults to `release_tag` in
+`distribution/.squad/squad.json`):
+
+1. It always runs the same validate + test suite (it does **not** skip tests
+   when the tag already exists).
+2. It resolves the version. If that tag or GitHub Release already exists, it
+   stops before packaging — a docs-only merge after a release publishes
    nothing.
-2. Otherwise it runs `scripts/validate.sh` and the test commands above, then
-   packages the release.
-3. It creates and pushes the annotated tag, creates the GitHub Release with
-   generated notes, and uploads `install.sh`, `update.sh`,
-   `squad-<version>.tar.gz`, and `squad-<version>.tar.gz.sha256`.
+3. Otherwise it packages the release, creates and pushes the annotated tag,
+   creates the GitHub Release (upgrade/rollback section plus generated change
+   notes), and uploads `install.sh`, `update.sh`, `squad-<version>.tar.gz`,
+   and `squad-<version>.tar.gz.sha256`.
 
-To release, bump `version` and `release_tag` in
-`distribution/.squad/squad.json`, update `CHANGELOG.md`, and merge to `main`.
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the version rules.
+To release, open a dedicated PR that bumps `version` and `release_tag` in
+`distribution/.squad/squad.json`, updates `CHANGELOG.md` and every README
+pin together, states the CONTRIBUTING semver class, and merges only when CI
+is green. See [CONTRIBUTING.md](CONTRIBUTING.md) and
+[`docs/release-process.md`](docs/release-process.md).
 
 > **Every version bump must update every version pin in this README**:
 > release-asset URLs, `--version` flags, archive filenames, and the

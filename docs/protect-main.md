@@ -1,0 +1,31 @@
+# Protect `main` (issue #27)
+
+Operator steps after [CI (#26)](https://github.com/ExperienceQuality/xq-squad/issues/26) is live on `main`. Do **not** enable required checks before the `CI / validate-and-test` check exists.
+
+## Goal
+
+- Humans cannot push directly to `main` (PR required)
+- `CI / validate-and-test` is a required status check
+- One approving review is required
+- Admin bypass of the required check is off for normal use (or any bypass is explicit)
+
+## GitHub UI
+
+1. Open **Settings → Rules → Rulesets** (preferred) or **Branches → Branch protection rules**.
+2. Confirm whether a ruleset or classic protection already covers `main`.
+3. Create or edit a ruleset targeting `main`:
+   - Restrict updates / require a pull request before merging
+   - Required approvals: **1**
+   - Required status checks: **`validate-and-test`** (workflow job name from `.github/workflows/ci.yml`)
+   - Do not allow administrators to bypass required checks in normal use
+4. Save and verify in the branch settings page.
+
+## Verify
+
+- Direct `git push origin main` is rejected for a non-exempt actor
+- A PR with failing CI cannot merge
+- A PR that only bumps `squad.json` cannot merge until CI is green
+
+## Note
+
+Repository administration API access may be unavailable to automation; an org owner (Release Manager / David) applies these settings in the UI once CI has produced the check name on a PR.
