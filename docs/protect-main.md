@@ -1,8 +1,10 @@
-# Protect `main` (issue #27)
+# Protect `main` (optional)
 
-Operator steps after [CI (#26)](https://github.com/ExperienceQuality/xq-squad/issues/26) is live on `main`. Do **not** enable required checks before the `CI / validate-and-test` check exists.
+[Issue #27](https://github.com/ExperienceQuality/xq-squad/issues/27) (enforce branch protection) was **cancelled**. CI on every PR/push already lives on `main` ([#32](https://github.com/ExperienceQuality/xq-squad/pull/32)). Dedicated release PRs remain **required process** — see [`docs/release-process.md`](release-process.md) — even without a ruleset.
 
-## Goal
+Use this page only if an org owner later chooses to turn on GitHub enforcement.
+
+## Goal (if enabling)
 
 - Humans cannot push directly to `main` (PR required)
 - `CI / validate-and-test` is a required status check
@@ -28,4 +30,4 @@ Operator steps after [CI (#26)](https://github.com/ExperienceQuality/xq-squad/is
 
 ## Note
 
-Repository administration API access may be unavailable to automation; an org owner (Release Manager / David) applies these settings in the UI once CI has produced the check name on a PR.
+Repository administration API access may be unavailable to automation; an org owner applies these settings in the UI once CI has produced the check name on a PR.

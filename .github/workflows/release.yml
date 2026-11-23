@@ -12,8 +12,8 @@ on:
         type: string
 
 # Always validate and test on this workflow. Packaging/publishing still skip
-# when the tag or GitHub Release already exists (#26). Prefer merging a
-# dedicated release PR (#29); branch protection for that is #27.
+# when the tag or GitHub Release already exists. Prefer merging a dedicated
+# release PR (#29); do not direct-push version bumps to main (process).
 jobs:
   # Same checks as CI. Kept in-workflow so a Release run cannot publish without
   # a green test job even if the separate CI workflow is delayed or missing.
@@ -123,6 +123,18 @@ jobs:
         run: |
           NOTES_FILE="$(mktemp)"
           AUTO_FILE="$(mktemp)"
+          CHANGELOG_FILE="$(mktemp)"
+          VER_NO_V="${VERSION#v}"
+          # This release's CHANGELOG section (breaking / required-behavior lives here).
+          awk -v ver="$VER_NO_V" '
+            $0 ~ ("^## \\[" ver "\\]") { p=1; print; next }
+            p && /^## \[/ { exit }
+            p { print }
+          ' CHANGELOG.md > "$CHANGELOG_FILE"
+          if [[ ! -s "$CHANGELOG_FILE" ]]; then
+            echo "Error: no CHANGELOG.md section for [$VER_NO_V]" >&2
+            exit 1
+          fi
           # Auto-generated PR list (same source as --generate-notes).
           gh api "repos/${REPO}/releases/generate-notes" \
             -f tag_name="$VERSION" \
@@ -131,7 +143,7 @@ jobs:
           {
             echo "## Upgrade / rollback"
             echo
-            echo "Consumers: follow the [README Upgrade](https://github.com/ExperienceQuality/xq-squad/blob/${VERSION}/README.md#upgrading) and [Rollback](https://github.com/ExperienceQuality/xq-squad/blob/${VERSION}/README.md#rollback) sections."
+            echo "Consumers: follow the [README Upgrade](https://github.com/ExperienceQuality/xq-squad/blob/${VERSION}/README.md#upgrade) and [Rollback](https://github.com/ExperienceQuality/xq-squad/blob/${VERSION}/README.md#rollback) sections."
             echo
             echo "Pinned upgrade command:"
             echo
@@ -139,7 +151,15 @@ jobs:
             echo "curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/${VERSION}/update.sh | sh -s -- --target . --version ${VERSION}"
             echo '```'
             echo
-            echo "See [CHANGELOG.md](https://github.com/ExperienceQuality/xq-squad/blob/${VERSION}/CHANGELOG.md) for release-specific migration notes and any required-behavior or breaking changes."
+            echo "---"
+            echo
+            echo "## Changelog (this release)"
+            echo
+            echo "Breaking or required-behavior changes, if any, are called out in this section (and must appear in CHANGELOG.md on the release PR)."
+            echo
+            cat "$CHANGELOG_FILE"
+            echo
+            echo "Full history: [CHANGELOG.md](https://github.com/ExperienceQuality/xq-squad/blob/${VERSION}/CHANGELOG.md)."
             echo
             echo "---"
             echo
