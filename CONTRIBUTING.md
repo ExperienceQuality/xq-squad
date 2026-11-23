@@ -57,19 +57,15 @@ Classify every change:
 ```bash
 bash scripts/validate.sh
 node --test tests/*.test.mjs
-bash tests/install.test.sh
-bash tests/install-pipe.test.sh
-bash tests/install-minimal.test.sh
-bash tests/upgrade.test.sh
-bash tests/e2e.test.sh
-bash tests/install-cursor.test.sh
-bash tests/upgrade-retired.test.sh
-bash tests/concurrent-delivery.test.sh
-bash tests/node-floor.test.sh
+# every shell fixture (CI globs the same way):
+for t in tests/*.test.sh; do bash "$t"; done
 ```
 
-Run them on Node.js 22 (and 24/26 when available). The `release` workflow (`.github/workflows/release.yml`) runs these same
-checks on every push to `main` before tagging and publishing a release.
+Run them on Node.js 22 (and 24/26 when available).
+
+**CI (`.github/workflows/ci.yml`)** runs `validate.sh`, `node --test tests/*.test.mjs`, and every `tests/*.test.sh` on every pull request and every push to `main`.
+
+**Release (`.github/workflows/release.yml`)** always runs those same checks first. It packages, tags, and publishes only when the resolved `release_tag` does not already exist as a git tag or GitHub Release. A docs-only push after a tag still runs CI and the Release test job; it does not skip tests.
 
 Also verify:
 
@@ -77,6 +73,23 @@ Also verify:
   shows `xq-squad`, and the subagents and skills are listed.
 - Asking the Agent to commit shows the `xq-squad-git-guard` approval prompt.
 
+## Releases
+
+Every version bump is a **dedicated release PR** (not a direct push to `main`).
+Bump `squad.json`, CHANGELOG, and README pins together; state the semver class
+from the Compatibility section above. Full playbook:
+[`docs/release-process.md`](docs/release-process.md).
+
+If the change touches concurrent-delivery contracts, hooks, or
+registry/worktree helpers, run the real two-session Cursor check in
+[`docs/two-session-concurrent-delivery-check.md`](docs/two-session-concurrent-delivery-check.md)
+and link the report from the PR. Unrelated work (for example a new optional
+skill) does not need that check. Keep
+`tests/concurrent-delivery.test.sh` in CI either way.
+
 ## PR template
 
-Include purpose, changed public contracts, compatibility classification, tests run, upgrade impact, security/permission impact, and CHANGELOG entry.
+Include purpose, changed public contracts, compatibility classification
+(patch/minor/major and why), tests run, upgrade impact, security/permission
+impact, and CHANGELOG entry. Release PRs also use the checklist in
+[`docs/release-process.md`](docs/release-process.md).
