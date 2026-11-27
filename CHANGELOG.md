@@ -1,5 +1,30 @@
 # Changelog
 
+## [3.0.0] - 2026-11-26
+
+### Removed
+
+- Cursor Task subagent `.cursor/agents/reviewer.md` (decision G1, #36). Review no
+  longer runs as a Lead subagent or same-session "embody the reviewer" fallback.
+
+### Added
+
+- Goldfish review workflow (`.squad/workflows/goldfish-review.md`) and
+  `goldfish-review` skill: the Lead stops at REVIEW with a four-field paste packet;
+  the user opens a **new visible chat** and pastes it; the Lead includes the
+  verdict verbatim in Delivery.
+- REVIEW stage in the delivery workflow (between Integration and Verification).
+
+### Changed
+
+- `.squad/agents/lead.md`, `squad-delivery`, `xq-squad.mdc`, and `AGENTS.md`:
+  delegate subagents for analyst/implementer/tester/memory-maintainer only;
+  review is BLOCKED until goldfish review returns; side chats forbidden for review.
+- `.squad/agents/reviewer.md`: goldfish-only role contract and packet rules.
+- Major version bump: required behavior change (human review step, no subagent
+  review). Upgrade notes: run `update.sh --version v3.0.0`; remove retired
+  `.cursor/agents/reviewer.md` with `--remove-retired` when ready.
+
 ## [2.1.0] - 2026-11-15
 
 ### Added

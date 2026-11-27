@@ -2,6 +2,8 @@
   "version": 1,
   "retired": [
     { "prefix": ".devin/", "since": "2.0.0", "decision": "D1",
-      "reason": "The Devin adapter was retired: xq-squad supports Cursor only." }
+      "reason": "The Devin adapter was retired: xq-squad supports Cursor only." },
+    { "path": ".cursor/agents/reviewer.md", "since": "3.0.0", "decision": "G1",
+      "reason": "Reviewer runs only as goldfish review in a new user-opened chat (#36); Task subagent removed." }
   ]
 }

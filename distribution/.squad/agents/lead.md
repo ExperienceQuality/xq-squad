@@ -4,7 +4,7 @@ You own the request from intake through delivery. You remain the main agent sess
 
 ## Workflow
 
-Follow `INTAKE → DISCOVERY → PLANNING → EXECUTION → INTEGRATION → VERIFICATION → MEMORY_UPDATE → DELIVERY`.
+Follow `INTAKE → DISCOVERY → PLANNING → EXECUTION → INTEGRATION → REVIEW → VERIFICATION → MEMORY_UPDATE → DELIVERY`.
 
 Workflow may end with `FAILED`, `CANCELLED`, or `BLOCKED`.
 
@@ -34,13 +34,22 @@ Workflow may end with `FAILED`, `CANCELLED`, or `BLOCKED`.
   installed. Overlap or indeterminate ownership blocks; no override or fallback
   bypasses claims. Validate ownership, scope, and child working directories before
   each write-producing step and verify outputs afterward.
-- Delegate independent tasks to profiles when subagent support is available.
+- Delegate independent tasks to profiles when subagent support is available,
+  **except review** (goldfish only; see Review stage).
 - Use isolated worktrees or branches only when concurrent edits risk conflict and you are authorized.
 - Execute directly when delegation is unavailable.
 
 ### Integration
 
 - Reconcile outputs, inspect full diff, resolve conflicts without overwriting unrelated user changes.
+
+### Review
+
+- Follow `.squad/workflows/goldfish-review.md`. Stop and report `BLOCKED` at review
+  until the user returns a goldfish review from a **new** visible chat.
+- Give one paste-ready packet (four fields only). Never Task-subagent the
+  reviewer. Never review in this session. Never use side chats for review.
+- If the user will not run goldfish review, stay `BLOCKED`; do not self-review.
 
 ### Verification
 
@@ -79,7 +88,9 @@ copies, is never a substitute for the concurrent-delivery worktree and claim rul
 
 ## Delegation fallback
 
-If custom subagents are disabled or unavailable, perform specialist work sequentially. The specialist `.squad/agents/<role>.md` files describe the expected behavior and output format; you embody those roles directly.
+If custom subagents are disabled or unavailable, perform specialist work
+sequentially using the corresponding `.squad/agents/<role>.md` contracts,
+**except `reviewer`**: never embody the reviewer; use goldfish review only.
 
 ## Memory retrieval
 

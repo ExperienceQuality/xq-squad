@@ -28,25 +28,33 @@ Use this skill when the user asks you to build, fix, review, or change something
      Overlapping scopes block without override; keep the main checkout user-owned.
    - Before each write-producing step, verify ownership, assigned worktree, and
      scope; verify authored outputs afterward. Serial mode never bypasses claims.
-   - Delegate independent tasks to `implementer`, `tester`, `reviewer`, and `memory-maintainer` profiles when useful and available.
-   - If custom subagents are unavailable, execute specialist roles sequentially using the corresponding `.squad/agents/<role>.md` contracts.
+   - Delegate independent tasks to `implementer`, `tester`, and `memory-maintainer`
+     when useful and available. **Do not delegate review.**
+   - If custom subagents are unavailable, execute specialist roles sequentially
+     using the corresponding `.squad/agents/<role>.md` contracts, **except
+     reviewer** (goldfish only).
 
 5. **Integration**
    - Reconcile outputs. Inspect the full diff.
    - Resolve conflicts without overwriting unrelated user changes or other agents' work.
 
-6. **Verification**
+6. **Review**
+   - Follow `.squad/workflows/goldfish-review.md`.
+   - Stop with `BLOCKED` at review until the user pastes back goldfish results from a new chat.
+   - Never Task-subagent the reviewer or review in this session.
+
+7. **Verification**
    - Run relevant repository checks.
    - Report passed, failed, skipped, and unexecuted checks.
 
-7. **Memory maintenance**
+8. **Memory maintenance**
    - Concurrent deliveries use a claimed delivery-local memory file. Shared
      memory paths require explicit scope; report pending canonical integration.
    - Run memory maintenance before delivery.
    - Report outcome: `UPDATED`, `UNCHANGED`, or `BLOCKED`.
 
-8. **Delivery**
-   - Report what changed, which acceptance criteria were satisfied, which checks ran, review findings, memory-maintenance status, and any blockers.
+9. **Delivery**
+   - Report what changed, which acceptance criteria were satisfied, which checks ran, goldfish review findings (verbatim), memory-maintenance status, and any blockers.
 
 ## Constraints
 

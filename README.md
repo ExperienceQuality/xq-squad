@@ -2,9 +2,9 @@
 
 Install a versioned agent squad into a GitHub repository so the Cursor Agent runs your software tasks through one repeatable, verified delivery process.
 
-Current release: **v2.1.0** — see [CHANGELOG.md](CHANGELOG.md) and
+Current release: **v3.0.0** — see [CHANGELOG.md](CHANGELOG.md) and
 [GitHub Releases](https://github.com/ExperienceQuality/xq-squad/releases).
-Fleet rollout (canary then waves): [`docs/v2.1.0-consumer-rollout-plan.md`](docs/v2.1.0-consumer-rollout-plan.md) ([#28](https://github.com/ExperienceQuality/xq-squad/issues/28)).
+Prior 2.1.0 fleet rollout: [issue #28](https://github.com/ExperienceQuality/xq-squad/issues/28) (plan document in repo `docs/`).
 
 ## What it is and who it's for
 
@@ -38,9 +38,10 @@ flowchart TD
     L -->|delegate| AN[analyst]
     L -->|delegate| IM[implementer]
     L -->|delegate| TE[tester]
-    L -->|delegate| RE[reviewer]
+    L -->|paste packet| U2[User opens new chat]
+    U2 --> GR[goldfish reviewer]
     L -->|delegate| MM[memory-maintainer]
-    AN & IM & TE & RE & MM -.->|fallback: Lead embodies role| L
+    AN & IM & TE & MM -.->|fallback: Lead embodies role| L
     L <--> MEM[(.squad/MEMORY.md<br/>memory/*.ndjson)]
 ```
 
@@ -53,7 +54,8 @@ stateDiagram-v2
     DISCOVERY --> PLANNING
     PLANNING --> EXECUTION
     EXECUTION --> INTEGRATION
-    INTEGRATION --> VERIFICATION
+    INTEGRATION --> REVIEW
+    REVIEW --> VERIFICATION
     VERIFICATION --> MEMORY_UPDATE
     MEMORY_UPDATE --> DELIVERY
     DELIVERY --> [*]
@@ -65,7 +67,8 @@ stateDiagram-v2
 ```
 
 In Cursor, the always-on rule `.cursor/rules/xq-squad.mdc` plays the role of
-`AGENTS.md`, and the specialists run as Cursor subagents.
+`AGENTS.md`, and most specialists run as Cursor subagents. **Review** runs as
+goldfish review in a new chat you open (`workflows/goldfish-review.md`).
 
 ### Roles
 
@@ -75,12 +78,11 @@ In Cursor, the always-on rule `.cursor/rules/xq-squad.mdc` plays the role of
 | `analyst` | Subagent, or the Lead | Repository discovery and impact analysis | `readonly: true` |
 | `implementer` | Subagent, or the Lead | Assigned code changes following repository conventions | `readonly: false` |
 | `tester` | Subagent, or the Lead | Runs the relevant checks and tests | `readonly: false` |
-| `reviewer` | Subagent, or the Lead | Reviews changes and identifies risks | `readonly: true` |
+| `reviewer` | New chat you open (goldfish) | Reviews changes from a four-field packet only | `goldfish-review` skill |
 | `memory-maintainer` | Subagent, or the Lead | Reconciles durable memory; reports `UPDATED`, `UNCHANGED`, or `BLOCKED` | `readonly: false` |
 
 Role contracts live in `.squad/agents/<role>.md`. The Cursor subagents
-(`.cursor/agents/<role>.md`) point to them. If custom subagents are unavailable, the Lead performs each
-role itself, sequentially.
+(`.cursor/agents/<role>.md`) point to them except `reviewer` (retired subagent in 3.0.0). If custom subagents are unavailable, the Lead performs each role sequentially **except review**.
 
 ### Authority rule
 
@@ -107,7 +109,7 @@ In Cursor, the `xq-squad-git-guard` hook also asks you to approve each
 Pipe the installer straight into `sh` (POSIX-compatible, no download needed):
 
 ```bash
-curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v2.1.0/install.sh | sh -s -- --target . --version v2.1.0
+curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v3.0.0/install.sh | sh -s -- --target . --version v3.0.0
 ```
 
 The installer is self-contained: helper scripts ship inside the release archive.
@@ -115,20 +117,20 @@ If the target repo has uncommitted changes and stdin is not a TTY (e.g. piped or
 CI), the installer refuses to continue — pass `--yes` to proceed non-interactively:
 
 ```bash
-curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v2.1.0/install.sh | sh -s -- --target . --version v2.1.0 --yes
+curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v3.0.0/install.sh | sh -s -- --target . --version v3.0.0 --yes
 ```
 
 Or download and run it yourself:
 
 ```bash
-curl -fL https://github.com/ExperienceQuality/xq-squad/releases/download/v2.1.0/install.sh -o /tmp/squad-install.sh
-sh /tmp/squad-install.sh --target . --version v2.1.0
+curl -fL https://github.com/ExperienceQuality/xq-squad/releases/download/v3.0.0/install.sh -o /tmp/squad-install.sh
+sh /tmp/squad-install.sh --target . --version v3.0.0
 ```
 
 Or use a local archive:
 
 ```bash
-bash install.sh --target . --version v2.1.0 --archive squad-v2.1.0.tar.gz --checksum squad-v2.1.0.tar.gz.sha256
+bash install.sh --target . --version v3.0.0 --archive squad-v3.0.0.tar.gz --checksum squad-v3.0.0.tar.gz.sha256
 ```
 
 ### `install.sh` flags
@@ -165,13 +167,13 @@ the squad hooks are not installed).
 Pull a newer release into a consumer repo:
 
 ```bash
-curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v2.1.0/update.sh | sh -s -- --target . --version v2.1.0
+curl -LsSf https://github.com/ExperienceQuality/xq-squad/releases/download/v3.0.0/update.sh | sh -s -- --target . --version v3.0.0
 ```
 
 Or, from a clone of this repo:
 
 ```bash
-bash update.sh --target /path/to/consumer-repo --version v2.1.0
+bash update.sh --target /path/to/consumer-repo --version v3.0.0
 ```
 
 `update.sh` accepts the same flags as `install.sh` except `--dry-run`. It
@@ -238,7 +240,7 @@ Run the normal update command with the 2.0 release. The updater lists the `.devi
 - files you changed are kept and reported, and the update still succeeds;
 - your `.devin/rules/local-*` and `.devin/agents/local-*` files are never touched.
 
-If you kept the files, delete them later with `update.sh --target . --version v2.1.0 --remove-retired`.
+If you kept the files, delete them later with `update.sh --target . --version v3.0.0 --remove-retired`.
 If you still use Devin, stay on 1.x.
 
 ### Rollback
@@ -511,7 +513,7 @@ tests protocol behavior only, not real runtime compatibility.
 Package a release locally (writes to `.releases/`):
 
 ```bash
-bash scripts/package-release.sh --version v2.1.0
+bash scripts/package-release.sh --version v3.0.0
 ```
 
 ## Releasing
