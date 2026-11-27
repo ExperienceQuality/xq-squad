@@ -61,8 +61,8 @@ printf 'mine\n' > "$C2/.cursor/rules/local-mine.mdc"
 printf '{"version":1,"hooks":{"stop":[{"command":"./mine.sh"}]}}\n' > "$C2/.cursor/hooks.json"
 update_v "$C2" v1.4.0 >/dev/null
 [ "$(cat "$C2/.cursor/rules/local-mine.mdc")" = "mine" ] || fail "consumer-owned rule changed"
-[ -f "$C2/.cursor/agents/reviewer.md" ] || fail ".cursor agents not adopted"
-state_has "$C2" .cursor/agents/reviewer.md || fail "adopted files not tracked"
+[ -f "$C2/.cursor/agents/analyst.md" ] || fail ".cursor agents not adopted"
+state_has "$C2" .cursor/agents/analyst.md || fail "adopted files not tracked"
 node -e "
 const h=JSON.parse(require('fs').readFileSync('$C2/.cursor/hooks.json','utf8')).hooks;
 if(h.stop[0].command!=='./mine.sh'||h.stop.length!==2) process.exit(1);" || fail "consumer stop hook lost"
