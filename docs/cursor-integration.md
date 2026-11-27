@@ -7,8 +7,8 @@ subagents (https://cursor.com/docs/context/subagents), skills
 | File | Purpose |
 | --- | --- |
 | `.cursor/rules/xq-squad.mdc` | `alwaysApply: true`. Makes the main Agent the Lead and points to `.squad/agents/lead.md` and the workflows. Cursor ignores `.md` files in `rules/`, so the extension must be `.mdc`. |
-| `.cursor/agents/<role>.md` | Subagents `analyst`, `reviewer` (`readonly: true`), `implementer`, `tester`, `memory-maintainer`. Each defers to `.squad/agents/<role>.md` and returns a structured result to the Lead. |
-| `.cursor/skills/<name>/SKILL.md` | `squad-delivery`, `train-me`, `caveman`, `fetch-openapi-spec`. |
+| `.cursor/agents/<role>.md` | Subagents `analyst`, `implementer`, `tester`, `memory-maintainer`. Each defers to `.squad/agents/<role>.md`. Review uses goldfish review in a new user-opened chat (`.cursor/skills/goldfish-review/`); the reviewer subagent was retired in 3.0.0. |
+| `.cursor/skills/<name>/SKILL.md` | `squad-delivery`, `goldfish-review`, `train-me`, `caveman`, `fetch-openapi-spec`. |
 | `.cursor/hooks.json` | Project hooks (run from the project root, need Node.js 22 or newer on PATH; without it `install.sh` does not install them and warns). |
 
 ## Hooks

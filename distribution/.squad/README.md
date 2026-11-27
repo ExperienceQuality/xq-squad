@@ -3,7 +3,7 @@
 Repository-native agent squad for Cursor. No hosted service. No database. The Cursor Agent is the interface. This `.squad/` directory is the canonical, runtime-independent source of truth; `.cursor/` only adapts it to the runtime and must not weaken it.
 
 Installed release: see `release_tag` in `.squad/squad.json` (or `.squad/install-state.json`).
-Current upstream release: v2.1.0 — [releases](https://github.com/ExperienceQuality/xq-squad/releases),
+Current upstream release: v3.0.0 — [releases](https://github.com/ExperienceQuality/xq-squad/releases),
 [changelog](https://github.com/ExperienceQuality/xq-squad/blob/main/CHANGELOG.md).
 
 ## Layout
@@ -35,10 +35,10 @@ AGENTS.md                          # Always-on Lead instructions, managed sectio
 
 ## How to use
 
-1. Install a pinned release: `install.sh --target . --version v2.1.0` (or `curl -LsSf <release>/install.sh | sh -s -- --target . --version v2.1.0`).
+1. Install a pinned release: `install.sh --target . --version v3.0.0` (or `curl -LsSf <release>/install.sh | sh -s -- --target . --version v3.0.0`).
 2. Open Cursor Agent on this repository and describe the task in plain language — no commands or special syntax needed. `AGENTS.md` and `.cursor/rules/xq-squad.mdc` make the main agent the Agent Lead automatically.
 3. The Lead reads this README, follows `agents/lead.md`, and invokes the `squad-delivery` skill when useful.
-4. Specialist profiles in `.cursor/agents/` are delegated to as Cursor subagents; otherwise the Lead performs each role sequentially.
+4. Specialist profiles in `.cursor/agents/` are delegated as Cursor subagents when available; otherwise the Lead performs each role sequentially **except review** (goldfish: you open a new chat — `workflows/goldfish-review.md`).
 5. Every delivery reports what changed, which checks ran, review findings, and memory status (`UPDATED`, `UNCHANGED`, or `BLOCKED`).
 6. Upgrade with `update.sh --target . --version vX.Y.Z` (requires Node.js 22 or newer). Never re-run `install.sh` over an existing installation.
 
@@ -50,7 +50,7 @@ AGENTS.md                          # Always-on Lead instructions, managed sectio
 | `analyst` | Repository discovery and impact analysis (read-only). |
 | `implementer` | Assigned code changes following repository conventions. |
 | `tester` | Relevant checks and test execution. |
-| `reviewer` | Change review and risk identification (read-only in Cursor). |
+| `reviewer` | Goldfish review in a **new chat you open** (`goldfish-review` skill); not a subagent. |
 | `memory-maintainer` | Durable memory reconciliation and update. |
 
 The Lead never commits, pushes, or opens a PR unless explicitly asked in the
@@ -65,7 +65,8 @@ PR, or release command.
 
 Each skill ships in `.cursor/skills/`.
 
-- `squad-delivery`: runs the 8-stage workflow in `workflows/delivery.md`.
+- `squad-delivery`: runs the delivery workflow in `workflows/delivery.md` (includes REVIEW).
+- `goldfish-review`: reviewer-only identity in a new chat; paste packet from the Lead.
 - `train-me`: patient tutor. Triggered by requests such as "train me",
   "teach me", or "help me learn"; explains simply, uses analogies and short
   examples, and always explains why. No commands or options.
@@ -153,13 +154,14 @@ flowchart TD
     U[User prompt in Cursor Agent] --> L[Agent Lead<br/>main session]
     A[AGENTS.md<br/>always-on contract] --> L
     L --> SK[squad-delivery skill]
-    SK --> WF[delivery workflow<br/>8 stages]
+    SK --> WF[delivery workflow]
     L -->|delegate| AN[analyst]
     L -->|delegate| IM[implementer]
     L -->|delegate| TE[tester]
-    L -->|delegate| RE[reviewer]
     L -->|delegate| MM[memory-maintainer]
-    AN & IM & TE & RE & MM -.->|fallback: Lead embodies role| L
+    L -->|paste packet| U2[User opens new chat]
+    U2 --> GR[goldfish reviewer]
+    AN & IM & TE & MM -.->|fallback: Lead embodies role| L
     L <--> MEM[(.squad/MEMORY.md<br/>memory/*.ndjson)]
 ```
 
@@ -173,7 +175,8 @@ stateDiagram-v2
     DISCOVERY --> PLANNING
     PLANNING --> EXECUTION
     EXECUTION --> INTEGRATION
-    INTEGRATION --> VERIFICATION
+    INTEGRATION --> REVIEW
+    REVIEW --> VERIFICATION
     VERIFICATION --> MEMORY_UPDATE
     MEMORY_UPDATE --> DELIVERY
     DELIVERY --> [*]

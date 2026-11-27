@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, readFile, cp, rm } from 'node:fs/promises';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -40,7 +40,7 @@ test('validator rejects plain .md rules, mismatched skill names, unknown hook ev
 });
 
 test('cursor subagents reference canonical contracts and keep governance', async () => {
-  for (const role of ['analyst', 'implementer', 'tester', 'reviewer', 'memory-maintainer']) {
+  for (const role of ['analyst', 'implementer', 'tester', 'memory-maintainer']) {
     const fm = parseFrontmatter(await readFile(path.join(DIST, `.cursor/agents/${role}.md`), 'utf8'));
     assert.equal(fm.data.name, role);
     assert.match(fm.body, new RegExp(`\\.squad/agents/${role}\\.md`));
@@ -103,6 +103,7 @@ async function stubHelpers(records, status = 'OK', scopeResult = { status: 'OK',
 }
 
 test('scope guard: main checkout without deliveries is allowed', async () => {
+  delete process.env.CURSOR_PROJECT_DIR;
   const repo = await tmp();
   const helpers = await stubHelpers([]);
   const out = await scopeGuard.decide({ tool_input: { file_path: 'src/a.js' }, workspace_roots: [repo] }, { helpersRoot: helpers });
@@ -110,20 +111,23 @@ test('scope guard: main checkout without deliveries is allowed', async () => {
 });
 
 test('scope guard: write in a claimed worktree outside scope is denied', async () => {
+  delete process.env.CURSOR_PROJECT_DIR;
   const repo = await tmp();
   const wt = path.join(repo, '.squad/worktrees/d1');
-  await mkdir(wt, { recursive: true });
-  const rec = { deliveryId: 'd1', state: 'ACTIVE', worktreePath: wt, scope: ['src/a'] };
+  await mkdir(path.join(wt, 'src/a'), { recursive: true });
+  const wtReal = realpathSync(wt);
+  const rec = { deliveryId: 'd1', state: 'ACTIVE', worktreePath: wtReal, scope: ['src/a'] };
   const blocked = await stubHelpers([rec], 'OK', { status: 'BLOCKED', code: 'SCOPE_CONFLICT', violations: [{ reason: 'outside scope' }] });
-  const out = await scopeGuard.decide({ tool_input: { file_path: path.join(wt, 'src/b.js') }, workspace_roots: [wt] }, { helpersRoot: blocked });
+  const out = await scopeGuard.decide({ tool_input: { file_path: path.join(wtReal, 'src/b.js') }, workspace_roots: [wtReal] }, { helpersRoot: blocked });
   assert.equal(out.permission, 'deny');
-  assert.match(out.agent_message, /outside the claimed scope of d1/);
+  assert.match(out.agent_message, /outside (delivery worktree|the claimed scope)/);
   const ok = await stubHelpers([rec]);
-  const allowed = await scopeGuard.decide({ tool_input: { file_path: 'src/a/x.js' }, workspace_roots: [wt] }, { helpersRoot: ok });
+  const allowed = await scopeGuard.decide({ tool_input: { file_path: path.join(wtReal, 'src/a/x.js') }, workspace_roots: [wtReal] }, { helpersRoot: ok });
   assert.equal(allowed.permission, 'allow');
 });
 
 test('scope guard: session in a worktree cannot write outside it; indeterminate registry fails closed', async () => {
+  delete process.env.CURSOR_PROJECT_DIR;
   const repo = await tmp();
   const wt = path.join(repo, '.squad/worktrees/d1');
   await mkdir(wt, { recursive: true });

@@ -19,7 +19,7 @@ This repository is the package source. Consumers receive only `distribution/` fi
 ## Adding an agent
 
 1. Add portable role contract at `distribution/.squad/agents/<name>.md`.
-2. Add the Cursor subagent at `distribution/.cursor/agents/<name>.md` (it must reference the role contract).
+2. Add the Cursor subagent at `distribution/.cursor/agents/<name>.md` (it must reference the role contract), unless the role is intentionally goldfish-only (like `reviewer` since 3.0.0).
 3. Register the agent in `distribution/.squad/squad.json`.
 4. Update Lead delegation guidance if relevant.
 5. Add tests and run `bash scripts/validate.sh`.

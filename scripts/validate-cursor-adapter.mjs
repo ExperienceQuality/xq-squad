@@ -8,7 +8,10 @@ import { pathToFileURL } from 'node:url';
 
 export const RUNTIMES = new Set(['cursor']);
 const COMPONENT_PATH_KEYS = ['path', 'cursor_profile', 'cursor_path'];
-export const ROLES = ['analyst', 'implementer', 'tester', 'reviewer', 'memory-maintainer'];
+export const CURSOR_SUBAGENT_ROLES = ['analyst', 'implementer', 'tester', 'memory-maintainer'];
+export const CANONICAL_AGENT_ROLES = [...CURSOR_SUBAGENT_ROLES, 'reviewer'];
+/** @deprecated Use CURSOR_SUBAGENT_ROLES or CANONICAL_AGENT_ROLES */
+export const ROLES = CURSOR_SUBAGENT_ROLES;
 // Hook events from https://cursor.com/docs/agent/hooks
 export const HOOK_EVENTS = new Set([
   'sessionStart', 'sessionEnd', 'preToolUse', 'postToolUse', 'postToolUseFailure',
@@ -47,9 +50,12 @@ export function validateAdapters(dist) {
   }
   if (!has('.cursor/rules/xq-squad.mdc')) err('.cursor/rules/xq-squad.mdc missing');
 
-  for (const role of ROLES) {
+  for (const role of CANONICAL_AGENT_ROLES) {
     const canonical = `.squad/agents/${role}.md`;
     if (!has(canonical)) err(`${canonical} missing`);
+  }
+  for (const role of CURSOR_SUBAGENT_ROLES) {
+    const canonical = `.squad/agents/${role}.md`;
     const rel = `.cursor/agents/${role}.md`;
     if (!has(rel)) { err(`${rel} missing (cursor adapter)`); continue; }
     const fm = parseFrontmatter(read(rel));

@@ -8,6 +8,7 @@ INTAKE
   -> PLANNING
   -> EXECUTION
   -> INTEGRATION
+  -> REVIEW
   -> VERIFICATION
   -> MEMORY_UPDATE
   -> DELIVERY
@@ -50,6 +51,13 @@ Workflow may terminate with `FAILED`, `CANCELLED`, or `BLOCKED`.
 - Reconcile outputs.
 - Inspect full diff.
 - Resolve conflicts without overwriting unrelated user changes or other agent work.
+
+## Review
+
+- Follow `goldfish-review.md`. Stop at `BLOCKED` until goldfish review returns.
+- Packet: user request, acceptance criteria, diff, test commands only.
+- No Task subagent reviewer, no same-session review, no side chats.
+- Include the user's pasted verdict verbatim in Delivery.
 
 ## Verification
 

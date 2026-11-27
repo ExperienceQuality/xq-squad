@@ -1,8 +1,8 @@
 {
   "$schema": "./schemas/squad-config.schema.json",
   "name": "xq-squad",
-  "version": "2.1.0",
-  "release_tag": "v2.1.0",
+  "version": "3.0.0",
+  "release_tag": "v3.0.0",
   "config_schema_version": "1.0.0",
   "memory_schema_version": "1.0.0",
   "repository": "https://github.com/ExperienceQuality/xq-squad",
@@ -40,9 +40,8 @@
       },
       "reviewer": {
         "path": "agents/reviewer.md",
-        "description": "Change review and risk identification.",
-        "managed": true,
-        "cursor_profile": "../.cursor/agents/reviewer.md"
+        "description": "Goldfish review in a user-opened chat (no Cursor subagent).",
+        "managed": true
       },
       "memory-maintainer": {
         "path": "agents/memory-maintainer.md",
@@ -71,11 +70,20 @@
         "path": "../.cursor/skills/fetch-openapi-spec/SKILL.md",
         "description": "Fetch the latest OpenAPI contract for a service from the centralized xq-luthor repository.",
         "managed": true
+      },
+      "goldfish-review": {
+        "path": "../.cursor/skills/goldfish-review/SKILL.md",
+        "description": "Reviewer-only session skill for goldfish review in a new user-opened chat.",
+        "managed": true
       }
     },
     "workflows": {
       "delivery": {
         "path": "workflows/delivery.md",
+        "managed": true
+      },
+      "goldfish-review": {
+        "path": "workflows/goldfish-review.md",
         "managed": true
       },
       "memory-maintenance": {
